@@ -1,0 +1,9 @@
+(env
+ (test
+  (env-vars
+   (OCAMLRUNPARAM "b")))
+ (dev
+  (env-vars
+   (OCAMLRUNPARAM "b"))
+  (flags
+   (:standard -g -w -69))))

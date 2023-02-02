@@ -1,0 +1,6 @@
+(library
+ (name tmx)
+ (public_name tmx)
+ (preprocess
+  (pps ppx_deriving.eq ppx_deriving.ord ppx_deriving.show))
+ (modules color error gid tmx util))
