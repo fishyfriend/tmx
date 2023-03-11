@@ -1,3 +1,3 @@
 module Color = Color
-module Error = Error
 module Gid = Gid
+module Property = Property0

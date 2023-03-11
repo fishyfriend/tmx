@@ -1,4 +1,4 @@
-(lang dune 3.5)
+(lang dune 3.7)
 
 (name tmx)
 
@@ -18,6 +18,8 @@
    (and
     (>= 4.14)))
   ppx_deriving
+  ppx_import
+  bigstringaf
   (alcotest :with-test)))
 
 (generate_opam_files true)

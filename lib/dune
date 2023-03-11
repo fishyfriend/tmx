@@ -1,0 +1,51 @@
+(library
+ (name tmx)
+ (public_name tmx)
+ (libraries bigstringaf)
+ (preprocess
+  (pps ppx_deriving.eq ppx_deriving.make ppx_deriving.ord ppx_deriving.show))
+ (modules
+  basic
+  bigstring
+  class
+  enum_intf
+  class_intf
+  customtype_intf
+  class0
+  color
+  customtype
+  customtype0
+  data
+  enum
+  enum0
+  error
+  gid
+  image
+  layer
+  layer0
+  layer_intf
+  loader
+  loader_intf
+  map
+  map0
+  map_intf
+  object
+  object0
+  object_intf
+  property
+  property0
+  property_intf
+  sigs
+  state
+  state_intf
+  template
+  template0
+  template_intf
+  tile
+  tile0
+  tile_intf
+  tileset
+  tileset0
+  tileset_intf
+  tmx
+  util))
