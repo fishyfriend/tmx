@@ -1,13 +1,14 @@
 (library
  (name tmx)
  (public_name tmx)
- (libraries bigstringaf)
+ (libraries bigstringaf ezjsonm)
  (preprocess
   (pps ppx_deriving.eq ppx_deriving.make ppx_deriving.ord ppx_deriving.show))
  (modules
   basic
   bigstring
   class
+  conv_json
   enum_intf
   class_intf
   customtype_intf
