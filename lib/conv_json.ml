@@ -33,7 +33,7 @@ let property_of_json json =
     | "file" -> `File (json' >|= J.get_string |? ".")
     | "object" -> `Object (json' >|= J.get_int |? 0)
     | "class" -> json' >|= property_value_of_json |? `Class []
-    | _ -> Util.json_parse (`String type_) "Invalid type" in
+    | _ -> Util.invalid_arg "type" type_ in
   Property0.make ~name ?propertytype ~value ()
 
 (* [get_dict] converting all keys to lowercase. Empirically, some undocumented
@@ -56,7 +56,7 @@ let class_of_json json =
       | "tileset" -> `Tileset
       | "wangcolor" -> `Wangcolor
       | "wangset" -> `Wangset
-      | _ -> Util.json_parse json "Invalid useas" in
+      | s -> Util.invalid_arg "useas" s in
     J.get_list of_json (List.assoc "useas" dict) in
   let members = J.get_list property_of_json (List.assoc "members" dict) in
   Class0.make ~useas ~members
@@ -68,7 +68,7 @@ let enum_of_json json =
       match J.get_string json with
       | "int" -> `Int
       | "string" -> `String
-      | s -> Util.invalid_arg s in
+      | s -> Util.invalid_arg "storagetype" s in
     of_json (List.assoc "storagetype" dict) in
   let valuesasflags = J.get_bool (List.assoc "valuesasflags" dict) in
   let values = J.get_strings (List.assoc "values" dict) in
@@ -86,5 +86,5 @@ let customtype_of_json =
     match J.get_string (List.assoc "type" dict) with
     | "class" -> `Class (class_of_json json)
     | "enum" -> `Enum (enum_of_json json)
-    | s -> Util.json_parse (`String s) "Invalid type" in
+    | s -> Util.invalid_arg "type" s in
   Customtype0.make ~id ~name ~variant

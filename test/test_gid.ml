@@ -13,7 +13,7 @@ let tc_bits =
   check Flags.empty max_id
 
 let check_id_rejected id =
-  let exn = Error.Error (`Invalid_arg (string_of_int id)) in
+  let exn = Error.Error (`Invalid_arg ("id", string_of_int id)) in
   Alcotest.check_raises "exn" exn @@ fun () -> ignore (make id)
 
 let tc_bounds =

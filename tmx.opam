@@ -8,9 +8,13 @@ bug-reports: "https://github.com/fishyfriend/tmx/issues"
 depends: [
   "dune" {>= "3.7"}
   "ocaml" {>= "4.14"}
+  "base64"
+  "bigstringaf"
+  "ezgzip"
+  "ezjsonm"
+  "ezxmlm"
   "ppx_deriving"
   "ppx_import"
-  "bigstringaf"
   "alcotest" {with-test}
   "odoc" {with-doc}
 ]

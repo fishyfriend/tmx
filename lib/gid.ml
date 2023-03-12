@@ -16,7 +16,7 @@ type t = int32 [@@deriving eq, show]
 let max_id = Int32.(to_int @@ lognot Flags.all)
 
 let make ?(flags = Flags.empty) id =
-  if id < 0 || id > max_id then Util.invalid_arg (string_of_int id) ;
+  if id < 0 || id > max_id then Util.invalid_arg "id" (string_of_int id) ;
   Int32.(logor flags @@ of_int id)
 
 let id t = Int32.(to_int @@ logand t @@ lognot Flags.all)

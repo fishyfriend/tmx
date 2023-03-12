@@ -16,14 +16,18 @@ let b t = Int32.(logand t 0xffl |> to_int)
 let of_int32 t = t
 let to_int32 t = t
 
-let cmpt ic = Scanf.bscanf ic "%1x%1x" @@ fun x y -> (x lsl 0x4) lor y
-let wrap f s = try f s with _ -> Util.invalid_arg s
-let of_string_argb =
-  wrap @@ fun s -> Scanf.sscanf s "%_1[#]%r%r%r%r%!" cmpt cmpt cmpt cmpt argb
-let of_string_rgb =
-  wrap @@ fun s -> Scanf.sscanf s "%_1[#]%r%r%r%!" cmpt cmpt cmpt rgb
+let sc1 ic = Scanf.bscanf ic "%1x%1x" @@ fun x y -> (x lsl 0x4) lor y
+
+let of_string_argb s =
+  try Scanf.sscanf s "%_1[#]%r%r%r%r%!" sc1 sc1 sc1 sc1 argb
+  with _ -> Util.invalid_arg "color" s
+
+let of_string_rgb s =
+  try Scanf.sscanf s "%_1[#]%r%r%r%!" sc1 sc1 sc1 rgb
+  with _ -> Util.invalid_arg "color" s
 
 let of_string s = try of_string_argb s with _ -> of_string_rgb s
+
 let to_string_argb t = Printf.sprintf "#%08lx" t
 let to_string_rgb t = Printf.sprintf "#%06lx" (Int32.logand t 0x00ffffffl)
 let to_string t = if a t = 0xff then to_string_rgb t else to_string_argb t

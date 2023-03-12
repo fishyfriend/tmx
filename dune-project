@@ -17,9 +17,13 @@
   (ocaml
    (and
     (>= 4.14)))
+  base64
+  bigstringaf
+  ezgzip
+  ezjsonm
+  ezxmlm
   ppx_deriving
   ppx_import
-  bigstringaf
   (alcotest :with-test)))
 
 (generate_opam_files true)

@@ -1,7 +1,7 @@
 type t = {tileset : (int * string) option; object_ : Object0.t}
 [@@deriving eq, ord, show]
 
-let make ?tileset ~object_ () =
+let make ?tileset object_ =
   match Object0.template object_ with
   | Some _ -> Util.nested_template ()
   | None -> {tileset; object_}

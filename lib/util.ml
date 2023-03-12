@@ -1,11 +1,16 @@
 let error err = raise (Error.Error err)
-let invalid_arg arg = error (`Invalid_arg arg)
+let invalid_arg name value = error (`Invalid_arg (name, value))
 let nested_template () = error `Nested_template
 let tilecount n_exp n = error (`Tilecount (n_exp, n))
 let object_not_found id = error (`Object_not_found id)
+
 let json_parse json msg =
   let repr = Ezjsonm.value_to_string json in
   error (`Json_parse (repr, msg))
+
+let xml_parse (attrs, nodes) msg =
+  let repr = Ezxmlm.to_string [`El ((("", "???"), attrs), nodes)] in
+  error (`Xml_parse (repr, msg))
 
 module Option_infix = struct
   let ( >>= ) o f = Option.bind o f

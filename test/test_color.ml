@@ -19,25 +19,25 @@ let tc_rgb =
 
 let t_constructors = ("Constructors", [tc_argb; tc_rgb])
 
-let check_raises_invalid_arg f x =
-  Alcotest.check_raises "exn" (Error.Error (`Invalid_arg x)) @@ fun () ->
-  ignore (f x)
+let check_raises_invalid_arg f k v =
+  Alcotest.check_raises "exn" (Error.Error (`Invalid_arg (k, v))) @@ fun () ->
+  ignore (f v)
 
 let tc_of_string_argb =
   Alcotest.test_case "Convert from ARGB string" `Quick @@ fun () ->
   let t_exp = argb 0xab 0xcd 0x12 0x34 in
   Alcotest.check (module Color) "=" t_exp (of_string_argb "abcd1234") ;
   Alcotest.check (module Color) "=" t_exp (of_string_argb "#abcd1234") ;
-  check_raises_invalid_arg of_string_argb "#abcd123" ;
-  check_raises_invalid_arg of_string_argb "abcd12345"
+  check_raises_invalid_arg of_string_argb "color" "#abcd123" ;
+  check_raises_invalid_arg of_string_argb "color" "abcd12345"
 
 let tc_of_string_rgb =
   Alcotest.test_case "Convert from RGB string" `Quick @@ fun () ->
   let t_exp = argb 0xff 0xcd 0x12 0x34 in
   Alcotest.check (module Color) "=" t_exp (of_string_rgb "cd1234") ;
   Alcotest.check (module Color) "=" t_exp (of_string_rgb "#cd1234") ;
-  check_raises_invalid_arg of_string_rgb "#abcd1" ;
-  check_raises_invalid_arg of_string_rgb "abcd123"
+  check_raises_invalid_arg of_string_rgb "color" "#abcd1" ;
+  check_raises_invalid_arg of_string_rgb "color" "abcd123"
 
 let tc_of_string =
   Alcotest.test_case "Convert from ARGB or RGB string" `Quick @@ fun () ->
@@ -47,10 +47,10 @@ let tc_of_string =
   let t_exp = argb 0xff 0xcd 0x12 0x34 in
   Alcotest.check (module Color) "=" t_exp (of_string "cd1234") ;
   Alcotest.check (module Color) "=" t_exp (of_string "#cd1234") ;
-  check_raises_invalid_arg of_string "#abcd123" ;
-  check_raises_invalid_arg of_string "abcd12345" ;
-  check_raises_invalid_arg of_string "#abcd1" ;
-  check_raises_invalid_arg of_string "abcd123"
+  check_raises_invalid_arg of_string "color" "#abcd123" ;
+  check_raises_invalid_arg of_string "color" "abcd12345" ;
+  check_raises_invalid_arg of_string "color" "#abcd1" ;
+  check_raises_invalid_arg of_string "color" "abcd123"
 
 let check_produces_string f s s_exp =
   Alcotest.(check string) "=" s_exp (f (of_string s))
