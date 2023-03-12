@@ -1,3 +1,5 @@
+open Util.Option_infix
+
 module Staggeraxis = struct type t = [`X | `Y] [@@deriving eq, ord, show] end
 
 type staggeraxis = Staggeraxis.t
@@ -74,19 +76,19 @@ type t =
 
 let version t = t.version
 let tiledversion t = t.tiledversion
-let class_ t = Option.value t.class_ ~default:""
-let renderorder t = Option.value t.renderorder ~default:`Right_down
-let compressionlevel t = Option.value t.compressionlevel ~default:(-1)
+let class_ t = t.class_ |? ""
+let renderorder t = t.renderorder |? `Right_down
+let compressionlevel t = t.compressionlevel |? -1
 let width t = t.width
 let height t = t.height
 let tilewidth t = t.tilewidth
 let tileheight t = t.tileheight
-let parallaxoriginx t = Option.value t.parallaxoriginx ~default:0
-let parallaxoriginy t = Option.value t.parallaxoriginy ~default:0
-let backgroundcolor t = Option.value t.backgroundcolor ~default:Color.trans
-let nextlayerid t = Option.value t.nextlayerid ~default:0 (* TODO *)
-let nextobjectid t = Option.value t.nextobjectid ~default:0 (* TODO *)
-let infinite t = Option.value t.infinite ~default:false
+let parallaxoriginx t = t.parallaxoriginx |? 0
+let parallaxoriginy t = t.parallaxoriginy |? 0
+let backgroundcolor t = t.backgroundcolor |? Color.trans
+let nextlayerid t = t.nextlayerid |? 0 (* TODO *)
+let nextobjectid t = t.nextobjectid |? 0 (* TODO *)
+let infinite t = t.infinite |? false
 let properties t = t.properties
 let tilesets t = t.tilesets
 let layers t = t.layers

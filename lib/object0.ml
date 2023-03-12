@@ -1,3 +1,5 @@
+open Util.Option_infix
+
 module Text = struct
   module Halign = struct
     type t = [`Center | `Right | `Justify | `Left] [@@deriving eq, ord, show]
@@ -27,17 +29,17 @@ module Text = struct
   [@@deriving eq, ord, show, make]
 
   let text t = t.text
-  let fontfamily t = Option.value t.fontfamily ~default:"sans-serif"
-  let pixelsize t = Option.value t.pixelsize ~default:16
-  let wrap t = Option.value t.wrap ~default:false
-  let color t = Option.value t.color ~default:Color.black
-  let bold t = Option.value t.bold ~default:false
-  let italic t = Option.value t.italic ~default:false
-  let underline t = Option.value t.underline ~default:false
-  let strikeout t = Option.value t.strikeout ~default:false
-  let kerning t = Option.value t.kerning ~default:true
-  let halign t = Option.value t.halign ~default:`Left
-  let valign t = Option.value t.valign ~default:`Top
+  let fontfamily t = t.fontfamily |? "sans-serif"
+  let pixelsize t = t.pixelsize |? 16
+  let wrap t = t.wrap |? false
+  let color t = t.color |? Color.black
+  let bold t = t.bold |? false
+  let italic t = t.italic |? false
+  let underline t = t.underline |? false
+  let strikeout t = t.strikeout |? false
+  let kerning t = t.kerning |? true
+  let halign t = t.halign |? `Left
+  let valign t = t.valign |? `Top
 end
 
 type text = Text.t
@@ -71,16 +73,16 @@ type t =
     shape : Shape.t option }
 [@@deriving eq, ord, show, make]
 
-let id t = Option.value t.id ~default:0
-let name t = Option.value t.name ~default:""
-let class_ t = Option.value t.class_ ~default:""
-let x t = Option.value t.x ~default:0.
-let y t = Option.value t.y ~default:0.
-let rotation t = Option.value t.rotation ~default:0.
-let visible t = Option.value t.visible ~default:true
+let id t = t.id |? 0
+let name t = t.name |? ""
+let class_ t = t.class_ |? ""
+let x t = t.x |? 0.
+let y t = t.y |? 0.
+let rotation t = t.rotation |? 0.
+let visible t = t.visible |? true
 let template t = t.template
 let properties t = t.properties
-let shape t = Option.value t.shape ~default:`Rectangle
+let shape t = t.shape |? `Rectangle
 
 let width t =
   match shape t with

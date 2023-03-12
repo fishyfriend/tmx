@@ -1,3 +1,5 @@
+open Util.Option_infix
+
 module Tilelayer = struct
   type t = {width : int; height : int; data : Data.t option}
   [@@deriving eq, ord, show, make]
@@ -19,7 +21,7 @@ module Objectgroup = struct
   type t = {draworder : Draworder.t option; objects : Object0.t list}
   [@@deriving eq, ord, show, make]
 
-  let draworder t = Option.value t.draworder ~default:`Topdown
+  let draworder t = t.draworder |? `Topdown
   let objects t = t.objects
   let get_object t id = List.find_opt (fun o -> Object0.id o = id) (objects t)
   let get_object_exn t id =
@@ -34,8 +36,8 @@ module Imagelayer = struct
   [@@deriving eq, ord, show, make]
 
   let image t = t.image
-  let repeatx t = Option.value t.repeatx ~default:false
-  let repeaty t = Option.value t.repeaty ~default:false
+  let repeatx t = t.repeatx |? false
+  let repeaty t = t.repeaty |? false
 end
 
 type imagelayer = Imagelayer.t
@@ -74,16 +76,16 @@ end
 
 type variant = Variant.t
 
-let id t = Option.value t.id ~default:0
-let name t = Option.value t.name ~default:""
-let class_ t = Option.value t.class_ ~default:""
-let opacity t = Option.value t.opacity ~default:1.
-let visible t = Option.value t.visible ~default:true
+let id t = t.id |? 0
+let name t = t.name |? ""
+let class_ t = t.class_ |? ""
+let opacity t = t.opacity |? 1.
+let visible t = t.visible |? true
 let tintcolor t = t.tintcolor
-let offsetx t = Option.value t.offsetx ~default:0.
-let offsety t = Option.value t.offsety ~default:0.
-let parallaxx t = Option.value t.parallaxx ~default:1.
-let parallaxy t = Option.value t.parallaxy ~default:1.
+let offsetx t = t.offsetx |? 0.
+let offsety t = t.offsety |? 0.
+let parallaxx t = t.parallaxx |? 1.
+let parallaxy t = t.parallaxy |? 1.
 let properties t = t.properties
 let variant t = t.variant
 

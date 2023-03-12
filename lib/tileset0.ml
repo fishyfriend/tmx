@@ -1,10 +1,12 @@
+open Util.Option_infix
+
 module Map = Stdlib.Map.Make (Int)
 
 module Tileoffset = struct
   type t = {x : int option; y : int option} [@@deriving eq, ord, show, make]
 
-  let x t = Option.value t.x ~default:0
-  let y t = Option.value t.y ~default:0
+  let x t = t.x |? 0
+  let y t = t.y |? 0
 end
 
 type tileoffset = Tileoffset.t
@@ -20,8 +22,8 @@ module Single = struct
 
   let tilewidth t = t.tilewidth
   let tileheight t = t.tileheight
-  let spacing t = Option.value t.spacing ~default:0
-  let margin t = Option.value t.margin ~default:0
+  let spacing t = t.spacing |? 0
+  let margin t = t.margin |? 0
   let image t = t.image
 end
 
@@ -110,12 +112,12 @@ let make ~name ?class_ ~tilecount ~columns ?objectalignment ?tilerendersize
     variant }
 
 let name t = t.name
-let class_ t = Option.value t.class_ ~default:""
+let class_ t = t.class_ |? ""
 let tilecount t = t.tilecount
 let columns t = t.columns
-let grid t = Option.value t.grid ~default:`Orthogonal
-let tilerendersize t = Option.value t.tilerendersize ~default:`Tile
-let fillmode t = Option.value t.fillmode ~default:`Stretch
+let grid t = t.grid |? `Orthogonal
+let tilerendersize t = t.tilerendersize |? `Tile
+let fillmode t = t.fillmode |? `Stretch
 let tileoffset t = t.tileoffset
 let properties t = t.properties
 let variant t = t.variant
@@ -147,10 +149,9 @@ let get_tile t id : Tile0.t option =
         let row = id / columns in
         let x = margin + (col * (width + spacing)) in
         let y = margin + (row * (height + spacing)) in
-        tile
-        |> Fun.flip Tile0.set_image (Some image)
-        |> Fun.flip Tile0.set_x (Some x)
-        |> Fun.flip Tile0.set_y (Some y)
-        |> Fun.flip Tile0.set_width (Some width)
-        |> Fun.flip Tile0.set_height (Some height)
-        |> Option.some
+        Some tile
+        >|= Fun.flip Tile0.set_image (Some image)
+        >|= Fun.flip Tile0.set_x (Some x)
+        >|= Fun.flip Tile0.set_y (Some y)
+        >|= Fun.flip Tile0.set_width (Some width)
+        >|= Fun.flip Tile0.set_height (Some height)

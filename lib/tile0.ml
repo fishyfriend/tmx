@@ -1,3 +1,5 @@
+open Util.Option_infix
+
 module Frame = struct
   type t = {tileid : int; duration : int} [@@deriving eq, ord, show, make]
 
@@ -21,9 +23,9 @@ type t =
 [@@deriving eq, ord, show, make]
 
 let id t = t.id
-let class_ t = Option.value t.class_ ~default:""
-let x t = Option.value t.x ~default:0
-let y t = Option.value t.y ~default:0
+let class_ t = t.class_ |? ""
+let x t = t.x |? 0
+let y t = t.y |? 0
 let image t = t.image
 let properties t = t.properties
 let objectgroup t = t.objectgroup
