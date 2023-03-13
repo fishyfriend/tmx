@@ -110,6 +110,53 @@ let object_of_xml ((attrs, nodes) as xml) =
   Object0.make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible
     ?properties ?shape ()
 
+let get_encoding attrs =
+  X.get_attr_opt "encoding" attrs >|= function
+  | "base64" -> `Base64
+  | "csv" -> `Csv
+  | s -> Util.invalid_arg "encoding" s
+
+let get_compression attrs =
+  X.get_attr_opt "compression" attrs >|= function
+  | "gzip" -> `Gzip
+  | "zlib" -> `Zlib
+  | "zstd" -> `Zstd
+  | s -> Util.invalid_arg "compression" s
+
+let data_of_xml0 ?encoding ?compression (_, nodes) =
+  match (encoding, compression) with
+  | None, None ->
+      let get_gid (attrs, _) = X.get_attr "gid" attrs |> Int32.of_string in
+      X.members_with_attr "tile" nodes
+      |> List.map get_gid |> Data.of_int32_list
+  | _ -> X.data_to_string nodes |> Data.of_string ?encoding ?compression
+
+let data_of_xml ((attrs, _) as xml) =
+  let encoding = get_encoding attrs in
+  let compression = get_compression attrs in
+  data_of_xml0 ?encoding ?compression xml
+
+let data_of_xml_chunked ~dims:(w, h) (attrs, nodes) =
+  let encoding = get_encoding attrs in
+  let compression = get_compression attrs in
+  let bytes = Bytes.create (w * h * 4) in
+  let chunks = X.members_with_attr "chunk" nodes in
+  let process_chunk xml =
+    let chunk = data_of_xml0 ?encoding ?compression xml in
+    let w = X.get_attr "width" attrs |> int_of_string in
+    let h = X.get_attr "height" attrs |> int_of_string in
+    let x = X.get_attr "x" attrs |> int_of_string in
+    let y = X.get_attr "y" attrs |> int_of_string in
+    let len = min w (w - x) * 4 in
+    let src = Data.bytes chunk in
+    let dst = bytes in
+    for row = 0 to min h (h - y) - 1 do
+      let src_off = row * w * 4 in
+      let dst_off = (x + ((y + row) * w)) * 4 in
+      Bytes.blit src src_off dst dst_off len
+    done in
+  List.iter process_chunk chunks ;
+  Data.make ?encoding ?compression bytes
 let image_of_xml (attrs, nodes) =
   let trans = X.get_attr_opt "trans" attrs >|= Color.of_string in
   let width = X.get_attr_opt "width" attrs >|= int_of_string in
@@ -125,8 +172,7 @@ let image_of_xml (attrs, nodes) =
           | "jpg" -> `Jpg
           | "png" -> `Png
           | s -> Util.invalid_arg "format" s in
-        let data =
-          X.member_with_attr "data" nodes |> Conv_data.image_data_of_xml in
+        let data = X.member_with_attr "data" nodes |> data_of_xml in
         `Embed (format, data) in
   Image.make ~source ?trans ?width ?height ()
 
@@ -207,29 +253,19 @@ let tileset_of_xml (attrs, nodes) =
         let margin = X.get_attr_opt "margin" attrs >|= int_of_string in
         let image = image_of_xml xml in
         let single =
-          Tileset0.Single.make ~tilewidth ~tileheight ?spacing ?margin image
-        in
+          Tileset0.Single.make ~tilecount ~tilewidth ~tileheight ?spacing
+            ?margin image in
         `Single single
     | None -> `Collection in
-  Tileset0.make ~name ?class_ ~tilecount ~columns ?objectalignment
-    ?tilerendersize ?fillmode ?tileoffset ?grid ~properties ~variant tiles
+  Tileset0.make ~name ?class_ ~columns ?objectalignment ?tilerendersize
+    ?fillmode ?tileoffset ?grid ~properties ~variant tiles
 
-let tileset_ref_of_xml ((attrs, _) as xml) :
-    int * [`File of string | `Embed of Tileset0.t] =
-  let firstgid = X.get_attr "firstgid" attrs |> int_of_string in
-  match X.get_attr_opt "source" attrs with
-  | None ->
-      let ts = tileset_of_xml xml in
-      (firstgid, `Embed ts)
-  | Some source -> (firstgid, `File source)
-
-let template_of_xml ((_, nodes) as xml) =
+let template_of_xml (_, nodes) =
   let tileset =
-    let+ xml' = X.member_with_attr_opt "tileset" nodes in
-    match tileset_ref_of_xml xml' with
-    | firstgid, `File fname -> (firstgid, fname)
-    | _, `Embed _ -> Util.xml_parse xml "Embedded tileset not allowed here"
-  in
+    let+ attrs, _ = X.member_with_attr_opt "tileset" nodes in
+    let source = X.get_attr "source" attrs in
+    let firstgid = X.get_attr "firstgid" attrs |> int_of_string in
+    (firstgid, source) in
   let object_ = X.member_with_attr "object" nodes |> object_of_xml in
   Template0.make ?tileset object_
 
@@ -251,10 +287,9 @@ let rec layer_of_xml ~type_ (attrs, nodes) =
         let width = X.get_attr "width" attrs |> int_of_string in
         let height = X.get_attr "height" attrs |> int_of_string in
         let data =
-          X.member_with_attr_opt "data" nodes >|= fun ((_, nodes) as xml) ->
+          X.member_with_attr_opt "data" nodes >|= fun xml ->
           let dims = (width, height) in
-          let chunked = X.has_member "chunk" nodes in
-          Conv_data.tile_data_of_xml ~dims ~chunked xml in
+          data_of_xml_chunked ~dims xml in
         let tilelayer = Layer0.Tilelayer.make ~width ~height ?data () in
         `Tilelayer tilelayer
     | `Objectgroup ->
@@ -292,7 +327,7 @@ and get_layers nodes =
       type_ >|= fun type_ -> layer_of_xml ~type_ @@ (attrs, nodes)
   | `Data _ -> None
 
-and map_of_xml (attrs, nodes) =
+let map_of_xml (attrs, nodes) =
   let version = X.get_attr "version" attrs in
   let tiledversion = X.get_attr_opt "tiledversion" attrs in
   let class_ = X.get_attr_opt "class" attrs in
@@ -315,13 +350,17 @@ and map_of_xml (attrs, nodes) =
     X.get_attr_opt "parallaxoriginy" attrs >|= int_of_string in
   let backgroundcolor =
     X.get_attr_opt "backgroundcolor" attrs >|= Color.of_string in
-  let nextlayerid = X.get_attr_opt "nextlayerid" attrs >|= int_of_string in
-  let nextobjectid = X.get_attr_opt "nextobjectid" attrs >|= int_of_string in
   let infinite = X.get_attr_opt "infinite" attrs >|= bool_of_string01 in
   let properties = get_properties nodes in
   let tilesets =
-    (* TODO sort and ensure gids are reasonable *)
-    X.members_with_attr "tileset" nodes |> List.map tileset_ref_of_xml in
+    let tileset_ref_of_xml ((attrs, _) as xml) =
+      let firstgid = X.get_attr "firstgid" attrs |> int_of_string in
+      let source =
+        match X.get_attr_opt "source" attrs with
+        | None -> `Embed (tileset_of_xml xml)
+        | Some source -> `File source in
+      (firstgid, source) in
+    List.map tileset_ref_of_xml (X.members_with_attr "tileset" nodes) in
   let layers = get_layers nodes in
   let variant =
     let staggeraxis () =
@@ -354,5 +393,4 @@ and map_of_xml (attrs, nodes) =
     | s -> Util.invalid_arg "orientation" s in
   Map0.make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel
     ~width ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
-    ?backgroundcolor ?nextlayerid ?nextobjectid ?infinite ~properties ~tilesets
-    ~layers ~variant ()
+    ?backgroundcolor ?infinite ~properties ~tilesets ~layers ~variant ()

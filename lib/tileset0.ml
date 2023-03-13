@@ -13,13 +13,15 @@ type tileoffset = Tileoffset.t
 
 module Single = struct
   type t =
-    { tilewidth : int;
+    { tilecount : int;
+      tilewidth : int;
       tileheight : int;
       spacing : int option;
       margin : int option;
       image : Image.t [@main] }
   [@@deriving eq, ord, show, make]
 
+  let tilecount t = t.tilecount
   let tilewidth t = t.tilewidth
   let tileheight t = t.tileheight
   let spacing t = t.spacing |? 0
@@ -73,7 +75,6 @@ type variant = Variant.t
 type t =
   { name : string;
     class_ : string option;
-    tilecount : int;
     columns : int;
     objectalignment : Objectalignment.t option;
     tilerendersize : Tilerendersize.t option;
@@ -85,8 +86,8 @@ type t =
     variant : Variant.t }
 [@@deriving eq, ord, show]
 
-let make ~name ?class_ ~tilecount ~columns ?objectalignment ?tilerendersize
-    ?fillmode ?tileoffset ?grid ?(properties = []) ~variant tiles =
+let make ~name ?class_ ~columns ?objectalignment ?tilerendersize ?fillmode
+    ?tileoffset ?grid ?(properties = []) ~variant tiles =
   let tile_map_of_list tiles =
     List.to_seq tiles
     |> Seq.map (fun tile -> (Tile0.id tile, tile))
@@ -94,13 +95,9 @@ let make ~name ?class_ ~tilecount ~columns ?objectalignment ?tilerendersize
   let tiles =
     match variant with
     | `Single _ -> tile_map_of_list tiles
-    | `Collection ->
-        let n = List.length tiles in
-        if n = tilecount then tile_map_of_list tiles
-        else Util.tilecount tilecount n in
+    | `Collection -> tile_map_of_list tiles in
   { name;
     class_;
-    tilecount;
     columns;
     objectalignment;
     tilerendersize;
@@ -113,7 +110,6 @@ let make ~name ?class_ ~tilecount ~columns ?objectalignment ?tilerendersize
 
 let name t = t.name
 let class_ t = t.class_ |? ""
-let tilecount t = t.tilecount
 let columns t = t.columns
 let grid t = t.grid |? `Orthogonal
 let tilerendersize t = t.tilerendersize |? `Tile
@@ -128,6 +124,11 @@ let objectalignment t =
   | Some x, _ -> x
   | None, `Orthogonal -> `Bottomleft
   | None, `Isometric _ -> `Bottom
+
+let tilecount t =
+  match variant t with
+  | `Single single -> Single.tilecount single
+  | `Collection -> List.length (tiles t)
 
 let get_tile t id : Tile0.t option =
   match variant t with

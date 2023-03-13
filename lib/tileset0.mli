@@ -12,6 +12,7 @@ module Single : sig
   type t [@@deriving eq, ord, show]
 
   val make :
+    tilecount:int ->
     tilewidth:int ->
     tileheight:int ->
     ?spacing:int ->
@@ -19,6 +20,7 @@ module Single : sig
     Image.t ->
     t
 
+  val tilecount : t -> int
   val tilewidth : t -> int
   val tileheight : t -> int
   val spacing : t -> int
@@ -74,7 +76,6 @@ type t [@@deriving eq, ord, show]
 val make :
   name:string ->
   ?class_:string ->
-  tilecount:int ->
   columns:int ->
   ?objectalignment:Objectalignment.t ->
   ?tilerendersize:Tilerendersize.t ->
