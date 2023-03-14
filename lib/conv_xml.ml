@@ -1,152 +1,186 @@
+module X = Ezxmlm
+
 open Util.Option_infix
 
-module X = struct
-  include Ezxmlm
+let optionalize f x = try Some (f x) with _ -> None
 
-  type t = Xmlm.attribute list * nodes
+let wrap name f x =
+  try f x with
+  | Error.Error (`Xml_parse (path, msg)) -> Util.xml_parse (name :: path) msg
+  | exn ->
+      let msg = Printexc.to_string exn in
+      Util.xml_parse [name] ("parse error: " ^ msg)
 
-  let get_attr_opt k attrs =
-    try Some (get_attr k attrs) with Not_found -> None
+let wrap_list f xs = List.mapi (fun i x -> wrap (string_of_int i) f x) xs
 
-  let member_opt k nodes =
-    try Some (member k nodes) with Tag_not_found _ -> None
+(* type xml = Xmlm.attribute list * nodes *)
 
-  let member_with_attr_opt k nodes =
-    try Some (member_with_attr k nodes) with Tag_not_found _ -> None
-end
+let attrs xml = fst xml
+let nodes xml = snd xml
+let data xml = X.data_to_string (nodes xml)
+
+let attr0 k xml = X.get_attr k (attrs xml)
+let attr k xml f = wrap ("@" ^ k) (fun xml -> attr0 k xml |> f) xml
+let attr' k xml = attr k xml Fun.id
+let attr_opt k xml f =
+  wrap ("@" ^ k) (fun xml -> optionalize (attr0 k) xml >|= f) xml
+let attr_opt' k xml = attr_opt k xml Fun.id
+
+let child0 k xml = X.member_with_attr k (nodes xml)
+let child k xml f = wrap k (fun xml -> child0 k xml |> f) xml
+let child' k xml = child k xml Fun.id
+let child_opt k xml f =
+  wrap k (fun xml -> optionalize (child0 k) xml >|= f) xml
+let child_opt' k xml = child_opt k xml Fun.id
+
+let children0 k xml = X.members_with_attr k (nodes xml)
+let children k xml f = wrap k (fun xml -> wrap_list f (children0 k xml)) xml
+let children' k xml = children k xml Fun.id
 
 let bool_of_string01 s =
   match s with
   | "0" -> false
   | "1" -> true
-  | _ -> Util.invalid_arg "string01" s
+  | _ -> Util.xml_parse [] "0 or 1 expected"
 
-let rec property_of_xml (attrs, nodes) =
-  let name = X.get_attr "name" attrs in
-  let propertytype = X.get_attr_opt "propertytype" attrs in
-  let type_ = X.get_attr_opt "value" attrs |? "string" in
+let property_type_of_string s =
+  match s with
+  | "string" -> `String
+  | "int" -> `Int
+  | "float" -> `Float
+  | "bool" -> `Bool
+  | "color" -> `Color
+  | "file" -> `File
+  | "object" -> `Object
+  | "class" -> `Class
+  | _ -> Util.xml_parse [] ("invalid type: " ^ s)
+
+let rec property_of_xml xml =
+  let name = attr' "name" xml in
+  let propertytype = attr_opt' "propertytype" xml in
+  let type_ = attr_opt "type" xml property_type_of_string |? `String in
   let value =
-    let s = X.get_attr_opt "value" attrs in
+    let aux f = attr_opt "value" xml f in
     match type_ with
-    | "string" -> `String (s |? "")
-    | "int" -> `Int (s >|= int_of_string |? 0)
-    | "float" -> `Float (s >|= float_of_string |? 0.)
-    | "bool" -> `Bool (s >|= bool_of_string |? false)
-    | "color" -> `Color (s >|= Color.of_string |? Color.trans)
-    | "file" -> `File (s |? ".")
-    | "object" -> `Object (s >|= int_of_string |? 0)
-    | "class" -> `Class (get_properties nodes)
-    | _ -> Util.invalid_arg "type" type_ in
+    | `String -> `String (aux Fun.id |? "")
+    | `Int -> `Int (aux int_of_string |? 0)
+    | `Float -> `Float (aux float_of_string |? 0.)
+    | `Bool -> `Bool (aux bool_of_string |? false)
+    | `Color -> `Color (aux Color.of_string |? Color.trans)
+    | `File -> `File (aux Fun.id |? ".")
+    | `Object -> `Object (aux int_of_string |? 0)
+    | `Class -> `Class (child_opt "properties" xml properties_of_xml |? [])
+  in
   Property0.make ~name ?propertytype ~value ()
 
-and get_properties nodes =
-  X.member_opt "properties" nodes
-  >|= X.members_with_attr "property"
-  >|= List.map property_of_xml |? []
+and properties_of_xml xml = children "property" xml property_of_xml
 
-let text_of_xml (attrs, nodes) =
-  let text = X.data_to_string nodes in
-  let fontfamily = X.get_attr_opt "fontfamily" attrs in
-  let pixelsize = X.get_attr_opt "pixelsize" attrs >|= int_of_string in
-  let wrap = X.get_attr_opt "wrap" attrs >|= bool_of_string01 in
-  let color = X.get_attr_opt "color" attrs >|= Color.of_string in
-  let bold = X.get_attr_opt "bold" attrs >|= bool_of_string01 in
-  let italic = X.get_attr_opt "italic" attrs >|= bool_of_string01 in
-  let underline = X.get_attr_opt "underline" attrs >|= bool_of_string01 in
-  let strikeout = X.get_attr_opt "strikeout" attrs >|= bool_of_string01 in
-  let kerning = X.get_attr_opt "kerning" attrs >|= bool_of_string01 in
-  let halign =
-    X.get_attr_opt "halign" attrs >|= function
-    | "left" -> `Left
-    | "center" -> `Center
-    | "right" -> `Right
-    | "justify" -> `Justify
-    | s -> Util.invalid_arg "halign" s in
-  let valign =
-    X.get_attr_opt "valign" attrs >|= function
-    | "top" -> `Top
-    | "center" -> `Center
-    | "bottom" -> `Bottom
-    | s -> Util.invalid_arg "valign" s in
+let halign_of_string s =
+  match s with
+  | "left" -> `Left
+  | "center" -> `Center
+  | "right" -> `Right
+  | "justify" -> `Justify
+  | s -> Util.xml_parse [] ("invalid halign " ^ s)
+
+let valign_of_string s =
+  match s with
+  | "top" -> `Top
+  | "center" -> `Center
+  | "bottom" -> `Bottom
+  | s -> Util.xml_parse [] ("invalid valign " ^ s)
+
+let text_of_xml xml =
+  let text = data xml in
+  let fontfamily = attr_opt' "fontfamily" xml in
+  let pixelsize = attr_opt "pixelsize" xml int_of_string in
+  let wrap = attr_opt "wrap" xml bool_of_string01 in
+  let color = attr_opt "color" xml Color.of_string in
+  let bold = attr_opt "bold" xml bool_of_string01 in
+  let italic = attr_opt "italic" xml bool_of_string01 in
+  let underline = attr_opt "underline" xml bool_of_string01 in
+  let strikeout = attr_opt "strikeout" xml bool_of_string01 in
+  let kerning = attr_opt "kerning" xml bool_of_string01 in
+  let halign = attr_opt "halign" xml halign_of_string in
+  let valign = attr_opt "valign" xml valign_of_string in
   Object0.Text.make ?fontfamily ?pixelsize ?wrap ?color ?bold ?italic
     ?underline ?strikeout ?kerning ?halign ?valign text
 
-let object_of_xml ((attrs, nodes) as xml) =
-  let id = X.get_attr_opt "id" attrs >|= int_of_string in
-  let name = X.get_attr_opt "name" attrs in
-  let class_ = X.get_attr_opt "class" attrs in
-  let x = X.get_attr_opt "x" attrs >|= float_of_string in
-  let y = X.get_attr_opt "y" attrs >|= float_of_string in
-  let width = X.get_attr_opt "width" attrs >|= float_of_string in
-  let height = X.get_attr_opt "height" attrs >|= float_of_string in
-  let rotation = X.get_attr_opt "rotation" attrs >|= float_of_string in
-  let visible = X.get_attr_opt "visible" attrs >|= bool_of_string01 in
-  let properties =
-    X.member_opt "properties" nodes
-    >|= X.members_with_attr "property"
-    >|= List.map property_of_xml in
-  let shape =
-    let get_points attrs =
-      let point_of_string s = Scanf.sscanf s "%f,%f" @@ fun x y -> (x, y) in
-      X.get_attr "points" attrs |> String.split_on_char ' '
-      |> List.map point_of_string in
-    let ellipse = X.member_with_attr_opt "ellipse" nodes in
-    let point = X.member_with_attr_opt "point" nodes in
-    let polygon = X.member_with_attr_opt "polygon" nodes in
-    let polyline = X.member_with_attr_opt "polyline" nodes in
-    let text = X.member_with_attr_opt "text" nodes in
-    let gid = X.get_attr_opt "gid" attrs >|= Int32.of_string >|= Gid.of_int32 in
-    match (ellipse, point, polygon, polyline, text, gid) with
-    | None, None, None, None, None, None -> None
-    | Some _, None, None, None, None, None -> Some `Ellipse
-    | None, Some _, None, None, None, None -> Some `Point
-    | None, None, Some (attrs, _), None, None, None ->
-        Some (`Polygon (get_points attrs))
-    | None, None, None, Some (attrs, _), None, None ->
-        Some (`Polyline (get_points attrs))
-    | None, None, None, None, Some xml, None -> Some (`Text (text_of_xml xml))
-    | None, None, None, None, None, Some gid -> Some (`Tile gid)
-    | _ -> Util.xml_parse xml "Ambiguous shape" in
+let polygon_of_xml xml =
+  let point_of_string s = Scanf.sscanf s "%f,%f" @@ fun x y -> (x, y) in
+  attr "points" xml @@ fun s ->
+  String.split_on_char ' ' s |> wrap_list point_of_string
+
+let shape_of_xml xml =
+  let ellipse = child_opt' "ellipse" xml in
+  let point = child_opt' "point" xml in
+  let polygon = child_opt "polygon" xml polygon_of_xml in
+  let polyline = child_opt "polyline" xml polygon_of_xml in
+  let text = child_opt "text" xml text_of_xml in
+  let gid = attr_opt "gid" xml @@ fun s -> Gid.of_int32 (Int32.of_string s) in
+  match (ellipse, point, polygon, polyline, text, gid) with
+  | None, None, None, None, None, None -> None
+  | Some _, None, None, None, None, None -> Some `Ellipse
+  | None, Some _, None, None, None, None -> Some `Point
+  | None, None, Some points, None, None, None -> Some (`Polygon points)
+  | None, None, None, Some points, None, None -> Some (`Polyline points)
+  | None, None, None, None, Some text, None -> Some (`Text text)
+  | None, None, None, None, None, Some gid -> Some (`Tile gid)
+  | _ -> Util.xml_parse [] "Ambiguous shape"
+
+let object_of_xml xml =
+  let id = attr_opt "id" xml int_of_string in
+  let name = attr_opt' "name" xml in
+  let class_ = attr_opt' "class" xml in
+  let x = attr_opt "x" xml float_of_string in
+  let y = attr_opt "y" xml float_of_string in
+  let width = attr_opt "width" xml float_of_string in
+  let height = attr_opt "height" xml float_of_string in
+  let rotation = attr_opt "rotation" xml float_of_string in
+  let visible = attr_opt "visible" xml bool_of_string01 in
+  let properties = child_opt "properties" xml properties_of_xml in
+  let shape = shape_of_xml xml in
   Object0.make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible
     ?properties ?shape ()
 
-let get_encoding attrs =
-  X.get_attr_opt "encoding" attrs >|= function
+let encoding_of_string s =
+  match s with
   | "base64" -> `Base64
   | "csv" -> `Csv
-  | s -> Util.invalid_arg "encoding" s
+  | _ -> Util.xml_parse [] "invalid encoding"
 
-let get_compression attrs =
-  X.get_attr_opt "compression" attrs >|= function
+let compression_of_string s =
+  match s with
   | "gzip" -> `Gzip
   | "zlib" -> `Zlib
   | "zstd" -> `Zstd
-  | s -> Util.invalid_arg "compression" s
+  | _ -> Util.xml_parse [] "invalid compression"
 
-let data_of_xml0 ?encoding ?compression (_, nodes) =
+let data_of_xml0 ?encoding ?compression xml =
   match (encoding, compression) with
   | None, None ->
-      let get_gid (attrs, _) = X.get_attr "gid" attrs |> Int32.of_string in
-      X.members_with_attr "tile" nodes
-      |> List.map get_gid |> Data.of_int32_list
-  | _ -> X.data_to_string nodes |> Data.of_string ?encoding ?compression
+      let gids =
+        children "tile" xml @@ fun xml' -> attr "gid" xml' Int32.of_string
+      in
+      Data.of_int32_list gids
+  | _ -> data xml |> Data.of_string ?encoding ?compression
 
-let data_of_xml ((attrs, _) as xml) =
-  let encoding = get_encoding attrs in
-  let compression = get_compression attrs in
+let data_of_xml xml =
+  let encoding = attr_opt "encoding" xml encoding_of_string in
+  let compression = attr_opt "compression" xml compression_of_string in
   data_of_xml0 ?encoding ?compression xml
 
-let data_of_xml_chunked ~dims:(w, h) (attrs, nodes) =
-  let encoding = get_encoding attrs in
-  let compression = get_compression attrs in
+let data_of_xml_chunked ~dims:(w, h) xml =
+  let encoding = attr_opt "encoding" xml encoding_of_string in
+  let compression = attr_opt "compression" xml compression_of_string in
   let bytes = Bytes.create (w * h * 4) in
-  let chunks = X.members_with_attr "chunk" nodes in
+  let chunks = children' "chunk" xml in
   let process_chunk xml =
     let chunk = data_of_xml0 ?encoding ?compression xml in
-    let w = X.get_attr "width" attrs |> int_of_string in
-    let h = X.get_attr "height" attrs |> int_of_string in
-    let x = X.get_attr "x" attrs |> int_of_string in
-    let y = X.get_attr "y" attrs |> int_of_string in
+    let w = attr "width" xml int_of_string in
+    let h = attr "height" xml int_of_string in
+    let x = attr "x" xml int_of_string in
+    let y = attr "y" xml int_of_string in
     let len = min w (w - x) * 4 in
     let src = Data.bytes chunk in
     let dst = bytes in
@@ -157,240 +191,262 @@ let data_of_xml_chunked ~dims:(w, h) (attrs, nodes) =
     done in
   List.iter process_chunk chunks ;
   Data.make ?encoding ?compression bytes
-let image_of_xml (attrs, nodes) =
-  let trans = X.get_attr_opt "trans" attrs >|= Color.of_string in
-  let width = X.get_attr_opt "width" attrs >|= int_of_string in
-  let height = X.get_attr_opt "height" attrs >|= int_of_string in
+
+let image_format_of_string s =
+  match String.lowercase_ascii s with
+  | "bmp" -> `Bmp
+  | "gif" -> `Gif
+  | "jpg" -> `Jpg
+  | "png" -> `Png
+  | _ -> Util.xml_parse [] "invalid format"
+
+let image_of_xml xml =
+  let trans = attr_opt "trans" xml Color.of_string in
+  let width = attr_opt "width" xml int_of_string in
+  let height = attr_opt "height" xml int_of_string in
   let source =
-    match X.get_attr_opt "source" attrs with
+    match attr_opt' "source" xml with
     | Some source -> `File source
     | None ->
-        let format =
-          X.get_attr "format" attrs |> String.lowercase_ascii |> function
-          | "bmp" -> `Bmp
-          | "gif" -> `Gif
-          | "jpg" -> `Jpg
-          | "png" -> `Png
-          | s -> Util.invalid_arg "format" s in
-        let data = X.member_with_attr "data" nodes |> data_of_xml in
+        let format = attr "format" xml image_format_of_string in
+        let data = child "data" xml data_of_xml in
         `Embed (format, data) in
   Image.make ~source ?trans ?width ?height ()
 
-let tile_of_xml (attrs, nodes) =
-  let id = X.get_attr "id" attrs |> int_of_string in
-  let class_ = X.get_attr_opt "class" attrs in
-  let x = X.get_attr_opt "x" attrs >|= int_of_string in
-  let y = X.get_attr_opt "y" attrs >|= int_of_string in
-  let width = X.get_attr_opt "width" attrs >|= int_of_string in
-  let height = X.get_attr_opt "height" attrs >|= int_of_string in
-  let properties = get_properties nodes in
-  let image = X.member_with_attr_opt "image" nodes >|= image_of_xml in
+let animation_of_xml xml =
+  children "frame" xml @@ fun xml' ->
+  let tileid = attr "tileid" xml' int_of_string in
+  let duration = attr "duration" xml' int_of_string in
+  Tile0.Frame.make ~tileid ~duration
+
+let tile_of_xml xml =
+  let id = attr "id" xml int_of_string in
+  let class_ = attr_opt' "class" xml in
+  let x = attr_opt "x" xml int_of_string in
+  let y = attr_opt "y" xml int_of_string in
+  let width = attr_opt "width" xml int_of_string in
+  let height = attr_opt "height" xml int_of_string in
+  let properties = child "properties" xml properties_of_xml in
+  let image = child_opt "image" xml image_of_xml in
   let objectgroup =
-    X.member_opt "objectgroup" nodes
-    >|= X.members_with_attr "object"
-    >|= List.map object_of_xml in
-  let animation =
-    let frame_of_xml (attrs, _) =
-      let tileid = X.get_attr "tileid" attrs |> int_of_string in
-      let duration = X.get_attr "duration" attrs |> int_of_string in
-      Tile0.Frame.make ~tileid ~duration in
-    X.member_opt "animation" nodes
-    >|= X.members_with_attr "frame"
-    >|= List.map frame_of_xml in
+    child_opt "objectgroup" xml @@ fun xml' ->
+    children "object" xml' object_of_xml in
+  let animation = child_opt "animation" xml animation_of_xml in
   Tile0.make ~id ?class_ ?x ?y ?width ?height ~properties ?image ?objectgroup
     ?animation ()
 
-let tileset_of_xml (attrs, nodes) =
-  let name = X.get_attr "name" attrs in
-  let class_ = X.get_attr_opt "class" attrs in
-  let tilecount = X.get_attr "tilecount" attrs |> int_of_string in
-  let columns = X.get_attr "columns" attrs |> int_of_string in
+let objectalignment_of_string s =
+  match s with
+  | "unspecified" -> `Unspecified
+  | "topleft" -> `Topleft
+  | "top" -> `Top
+  | "topright" -> `Topright
+  | "left" -> `Left
+  | "center" -> `Center
+  | "right" -> `Right
+  | "bottomleft" -> `Bottomleft
+  | "bottom" -> `Bottom
+  | "bottomright" -> `Bottomright
+  | _ -> Util.xml_parse [] "invalid objectalignment"
+
+let tilerendersize_of_string s =
+  match s with
+  | "tile" -> `Tile
+  | "grid" -> `Grid
+  | _ -> Util.xml_parse [] "invalid tilerendersize"
+
+let fillmode_of_string s =
+  match s with
+  | "stretch" -> `Stretch
+  | "preserve-aspect-fit" -> `Preserve_aspect_fit
+  | _ -> Util.xml_parse [] "fillmode"
+
+let tileoffset_of_xml xml =
+  let x = attr_opt "x" xml int_of_string in
+  let y = attr_opt "y" xml int_of_string in
+  Tileset0.Tileoffset.make ?x ?y ()
+
+let grid_of_xml xml =
+  match attr_opt' "orientation" xml with
+  | Some "orthogonal" | None -> `Orthogonal
+  | Some "isometric" ->
+      let width = attr "width" xml int_of_string in
+      let height = attr "height" xml int_of_string in
+      `Isometric (width, height)
+  | Some s -> Util.invalid_arg "orientation" s
+
+let single_of_xml xml =
+  let tilecount = attr "tilecount" xml int_of_string in
+  let tilewidth = attr "tilewidth" xml int_of_string in
+  let tileheight = attr "tileheight" xml int_of_string in
+  let spacing = attr_opt "spacing" xml int_of_string in
+  let margin = attr_opt "margin" xml int_of_string in
+  let image = image_of_xml xml in
+  Tileset0.Single.make ~tilecount ~tilewidth ~tileheight ?spacing ?margin image
+
+let tileset_of_xml xml =
+  let name = attr' "name" xml in
+  let class_ = attr_opt' "class" xml in
+  let columns = attr "columns" xml int_of_string in
   let objectalignment =
-    X.get_attr_opt "objectalignment" attrs >|= function
-    | "unspecified" -> `Unspecified
-    | "topleft" -> `Topleft
-    | "top" -> `Top
-    | "topright" -> `Topright
-    | "left" -> `Left
-    | "center" -> `Center
-    | "right" -> `Right
-    | "bottomleft" -> `Bottomleft
-    | "bottom" -> `Bottom
-    | "bottomright" -> `Bottomright
-    | s -> Util.invalid_arg "objectalignment" s in
-  let tilerendersize =
-    X.get_attr_opt "tilerendersize" attrs >|= function
-    | "tile" -> `Tile
-    | "grid" -> `Grid
-    | s -> Util.invalid_arg "tilerendersize" s in
-  let fillmode =
-    X.get_attr_opt "fillmode" attrs >|= function
-    | "stretch" -> `Stretch
-    | "preserve-aspect-fit" -> `Preserve_aspect_fit
-    | s -> Util.invalid_arg "fillmode" s in
-  let tileoffset =
-    X.member_with_attr_opt "tileoffset" nodes >|= fun (attrs, _) ->
-    let x = X.get_attr_opt "x" attrs >|= int_of_string in
-    let y = X.get_attr_opt "y" attrs >|= int_of_string in
-    Tileset0.Tileoffset.make ?x ?y () in
-  let grid =
-    X.member_with_attr_opt "grid" nodes >|= fun (attrs, _) ->
-    match X.get_attr_opt "orientation" attrs with
-    | Some "orthogonal" | None -> `Orthogonal
-    | Some "isometric" ->
-        let width = X.get_attr "width" attrs |> int_of_string in
-        let height = X.get_attr "height" attrs |> int_of_string in
-        `Isometric (width, height)
-    | Some s -> Util.invalid_arg "orientation" s in
-  let properties = get_properties nodes in
-  let tiles = X.members_with_attr "tile" nodes |> List.map tile_of_xml in
+    attr_opt "objectalignment" xml objectalignment_of_string in
+  let tilerendersize = attr_opt "tilerendersize" xml tilerendersize_of_string in
+  let fillmode = attr_opt "fillmode" xml fillmode_of_string in
+  let tileoffset = child_opt "tileoffset" xml tileoffset_of_xml in
+  let grid = child_opt "grid" xml grid_of_xml in
+  let properties = child_opt "properties" xml properties_of_xml in
+  let tiles = children "tile" xml tile_of_xml in
   let variant =
-    match X.member_with_attr_opt "image" nodes with
-    | Some xml ->
-        let tilewidth = X.get_attr "tilewidth" attrs |> int_of_string in
-        let tileheight = X.get_attr "tileheight" attrs |> int_of_string in
-        let spacing = X.get_attr_opt "spacing" attrs >|= int_of_string in
-        let margin = X.get_attr_opt "margin" attrs >|= int_of_string in
-        let image = image_of_xml xml in
-        let single =
-          Tileset0.Single.make ~tilecount ~tilewidth ~tileheight ?spacing
-            ?margin image in
-        `Single single
+    match child_opt' "image" xml with
+    | Some xml' -> `Single (single_of_xml xml')
     | None -> `Collection in
   Tileset0.make ~name ?class_ ~columns ?objectalignment ?tilerendersize
-    ?fillmode ?tileoffset ?grid ~properties ~variant tiles
+    ?fillmode ?tileoffset ?grid ?properties ~variant tiles
 
-let template_of_xml (_, nodes) =
+let template_of_xml xml =
   let tileset =
-    let+ attrs, _ = X.member_with_attr_opt "tileset" nodes in
-    let source = X.get_attr "source" attrs in
-    let firstgid = X.get_attr "firstgid" attrs |> int_of_string in
+    child_opt "tileset" xml @@ fun xml' ->
+    let source = attr' "source" xml' in
+    let firstgid = attr "firstgid" xml' int_of_string in
     (firstgid, source) in
-  let object_ = X.member_with_attr "object" nodes |> object_of_xml in
+  let object_ = child "object" xml object_of_xml in
   Template0.make ?tileset object_
 
-let rec layer_of_xml ~type_ (attrs, nodes) =
-  let id = X.get_attr_opt "id" attrs >|= int_of_string in
-  let name = X.get_attr_opt "name" attrs in
-  let class_ = X.get_attr_opt "class" attrs in
-  let opacity = X.get_attr_opt "opacity" attrs >|= float_of_string in
-  let visible = X.get_attr_opt "visible" attrs >|= bool_of_string01 in
-  let tintcolor = X.get_attr_opt "tintcolor" attrs >|= Color.of_string in
-  let offsetx = X.get_attr_opt "offsetx" attrs >|= float_of_string in
-  let offsety = X.get_attr_opt "offsety" attrs >|= float_of_string in
-  let parallaxx = X.get_attr_opt "parallaxx" attrs >|= float_of_string in
-  let parallaxy = X.get_attr_opt "parallaxy" attrs >|= float_of_string in
-  let properties = get_properties nodes in
+let tilelayer_of_xml xml =
+  let width = attr "width" xml int_of_string in
+  let height = attr "height" xml int_of_string in
+  let data =
+    child_opt "data" xml @@ fun xml ->
+    data_of_xml_chunked ~dims:(width, height) xml in
+  Layer0.Tilelayer.make ~width ~height ?data ()
+
+let draworder_of_string s =
+  match s with
+  | "index" -> `Index
+  | "topdown" -> `Topdown
+  | _ -> Util.xml_parse [] s
+
+let objectgroup_of_xml xml =
+  let draworder = attr_opt "draworder" xml draworder_of_string in
+  let objects = children "object" xml object_of_xml in
+  Layer0.Objectgroup.make ?draworder ~objects ()
+
+let imagelayer_of_xml xml =
+  let image = child_opt "image" xml image_of_xml in
+  let repeatx = attr_opt "repeatx" xml bool_of_string01 in
+  let repeaty = attr_opt "repeaty" xml bool_of_string01 in
+  Layer0.Imagelayer.make ?image ?repeatx ?repeaty ()
+
+let layer_type_of_string s =
+  match s with
+  | "layer" -> `Tilelayer
+  | "objectgroup" -> `Objectgroup
+  | "imagelayer" -> `Imagelayer
+  | "group" -> `Group
+  | _ -> Util.xml_parse [] "invalid type"
+
+let rec layer_of_xml ~type_ xml =
+  let id = attr_opt "id" xml int_of_string in
+  let name = attr_opt' "name" xml in
+  let class_ = attr_opt' "class" xml in
+  let opacity = attr_opt "opacity" xml float_of_string in
+  let visible = attr_opt "visible" xml bool_of_string01 in
+  let tintcolor = attr_opt "tintcolor" xml Color.of_string in
+  let offsetx = attr_opt "offsetx" xml float_of_string in
+  let offsety = attr_opt "offsety" xml float_of_string in
+  let parallaxx = attr_opt "parallaxx" xml float_of_string in
+  let parallaxy = attr_opt "parallaxy" xml float_of_string in
+  let properties = child_opt "properties" xml properties_of_xml in
   let variant =
     match type_ with
-    | `Tilelayer ->
-        let width = X.get_attr "width" attrs |> int_of_string in
-        let height = X.get_attr "height" attrs |> int_of_string in
-        let data =
-          X.member_with_attr_opt "data" nodes >|= fun xml ->
-          let dims = (width, height) in
-          data_of_xml_chunked ~dims xml in
-        let tilelayer = Layer0.Tilelayer.make ~width ~height ?data () in
-        `Tilelayer tilelayer
-    | `Objectgroup ->
-        let draworder =
-          X.get_attr_opt "draworder" attrs >|= function
-          | "index" -> `Index
-          | "topdown" -> `Topdown
-          | s -> Util.invalid_arg "draworder" s in
-        let objects =
-          X.members_with_attr "object" nodes |> List.map object_of_xml in
-        let objectgroup = Layer0.Objectgroup.make ?draworder ~objects () in
-        `Objectgroup objectgroup
-    | `Imagelayer ->
-        let image = X.member_with_attr_opt "image" nodes >|= image_of_xml in
-        let repeatx = X.get_attr_opt "repeatx" attrs >|= bool_of_string01 in
-        let repeaty = X.get_attr_opt "repeaty" attrs >|= bool_of_string01 in
-        let imagelayer = Layer0.Imagelayer.make ?image ?repeatx ?repeaty () in
-        `Imagelayer imagelayer
-    | `Group ->
-        let layers = X.member "layers" nodes |> get_layers in
-        `Group layers in
+    | `Tilelayer -> `Tilelayer (tilelayer_of_xml xml)
+    | `Objectgroup -> `Objectgroup (objectgroup_of_xml xml)
+    | `Imagelayer -> `Imagelayer (imagelayer_of_xml xml)
+    | `Group -> `Group (layers_of_xml xml) in
   Layer0.make ?id ?name ?class_ ?opacity ?visible ?tintcolor ?offsetx ?offsety
-    ?parallaxx ?parallaxy ~properties ~variant ()
+    ?parallaxx ?parallaxy ?properties ~variant ()
 
-and get_layers nodes =
-  Fun.flip List.filter_map nodes @@ function
-  | `El (((_, name), attrs), nodes) ->
-      let type_ =
-        match name with
-        | "layer" -> Some `Tilelayer
-        | "objectgroup" -> Some `Objectgroup
-        | "imagelayer" -> Some `Imagelayer
-        | "group" -> Some `Group
-        | _ -> None in
-      type_ >|= fun type_ -> layer_of_xml ~type_ @@ (attrs, nodes)
-  | `Data _ -> None
+and layers_of_xml xml =
+  List.filter_map
+    (function
+      | `El (((_, name), attrs), nodes) ->
+          optionalize layer_type_of_string name >|= fun type_ ->
+          layer_of_xml ~type_ (attrs, nodes)
+      | `Data _ -> None )
+    (nodes xml)
 
-let map_of_xml (attrs, nodes) =
-  let version = X.get_attr "version" attrs in
-  let tiledversion = X.get_attr_opt "tiledversion" attrs in
-  let class_ = X.get_attr_opt "class" attrs in
-  let renderorder =
-    X.get_attr_opt "renderorder" attrs >|= function
-    | "right-down" -> `Right_down
-    | "right-up" -> `Right_up
-    | "left-down" -> `Left_down
-    | "left-up" -> `Left_up
-    | s -> Util.invalid_arg "renderorder" s in
-  let compressionlevel =
-    X.get_attr_opt "compressionlevel" attrs >|= int_of_string in
-  let width = X.get_attr "width" attrs |> int_of_string in
-  let height = X.get_attr "height" attrs |> int_of_string in
-  let tilewidth = X.get_attr "tilewidth" attrs |> int_of_string in
-  let tileheight = X.get_attr "tileheight" attrs |> int_of_string in
-  let parallaxoriginx =
-    X.get_attr_opt "parallaxoriginx" attrs >|= int_of_string in
-  let parallaxoriginy =
-    X.get_attr_opt "parallaxoriginy" attrs >|= int_of_string in
-  let backgroundcolor =
-    X.get_attr_opt "backgroundcolor" attrs >|= Color.of_string in
-  let infinite = X.get_attr_opt "infinite" attrs >|= bool_of_string01 in
-  let properties = get_properties nodes in
-  let tilesets =
-    let tileset_ref_of_xml ((attrs, _) as xml) =
-      let firstgid = X.get_attr "firstgid" attrs |> int_of_string in
-      let source =
-        match X.get_attr_opt "source" attrs with
-        | None -> `Embed (tileset_of_xml xml)
-        | Some source -> `File source in
-      (firstgid, source) in
-    List.map tileset_ref_of_xml (X.members_with_attr "tileset" nodes) in
-  let layers = get_layers nodes in
-  let variant =
-    let staggeraxis () =
-      match X.get_attr "staggeraxis" attrs with
-      | "x" -> `X
-      | "y" -> `Y
-      | s -> Util.invalid_arg "staggeraxis" s in
-    let staggerindex () =
-      match X.get_attr "staggerindex" attrs with
-      | "even" -> `Even
-      | "odd" -> `Odd
-      | s -> Util.invalid_arg "staggerindex" s in
-    match X.get_attr "orientation" attrs with
-    | "orthogonal" -> `Orthogonal
-    | "isometric" -> `Isometric
-    | "staggered" ->
-        let staggered =
-          let staggeraxis = staggeraxis () in
-          let staggerindex = staggerindex () in
-          Map0.Staggered.make ~staggeraxis ~staggerindex in
-        `Staggered staggered
-    | "hexagonal" ->
-        let hexagonal =
-          let staggeraxis = staggeraxis () in
-          let staggerindex = staggerindex () in
-          let hexsidelength =
-            X.get_attr "hexsidelength" attrs |> int_of_string in
-          Map0.Hexagonal.make ~hexsidelength ~staggeraxis ~staggerindex in
-        `Hexagonal hexagonal
-    | s -> Util.invalid_arg "orientation" s in
+let renderorder_of_string s =
+  match s with
+  | "right-down" -> `Right_down
+  | "right-up" -> `Right_up
+  | "left-down" -> `Left_down
+  | "left-up" -> `Left_up
+  | _ -> Util.xml_parse [] "invalid renderorder"
+
+let staggeraxis_of_string s =
+  match s with
+  | "x" -> `X
+  | "y" -> `Y
+  | _ -> Util.xml_parse [] "invalid staggeraxis"
+
+let staggerindex_of_string s =
+  match s with
+  | "even" -> `Even
+  | "odd" -> `Odd
+  | _ -> Util.xml_parse [] "staggerindex"
+
+let orientation_of_string s =
+  match s with
+  | "orthogonal" -> `Orthogonal
+  | "isometric" -> `Isometric
+  | "staggered" -> `Staggered
+  | "hexagonal" -> `Hexagonal
+  | _ -> Util.xml_parse [] "invalid orientation"
+
+let staggered_of_xml xml =
+  let staggeraxis = attr "staggeraxis" xml staggeraxis_of_string in
+  let staggerindex = attr "staggerindex" xml staggerindex_of_string in
+  Map0.Staggered.make ~staggeraxis ~staggerindex
+
+let hexagonal_of_xml xml =
+  let staggeraxis = attr "staggeraxis" xml staggeraxis_of_string in
+  let staggerindex = attr "staggerindex" xml staggerindex_of_string in
+  let hexsidelength = attr "hexsidelength" xml int_of_string in
+  Map0.Hexagonal.make ~hexsidelength ~staggeraxis ~staggerindex
+
+let map_variant_of_xml xml =
+  match attr "orientation" xml orientation_of_string with
+  | `Orthogonal -> `Orthogonal
+  | `Isometric -> `Isometric
+  | `Staggered -> `Staggered (staggered_of_xml xml)
+  | `Hexagonal -> `Hexagonal (hexagonal_of_xml xml)
+
+let map_tileset_of_xml xml =
+  let firstgid = attr "firstgid" xml int_of_string in
+  let source =
+    match attr_opt' "source" xml with
+    | None -> `Embed (tileset_of_xml xml)
+    | Some source -> `File source in
+  (firstgid, source)
+
+let map_of_xml xml =
+  let version = attr' "version" xml in
+  let tiledversion = attr_opt' "tiledversion" xml in
+  let class_ = attr_opt' "class" xml in
+  let renderorder = attr_opt "renderorder" xml renderorder_of_string in
+  let compressionlevel = attr_opt "compressionlevel" xml int_of_string in
+  let width = attr "width" xml int_of_string in
+  let height = attr "height" xml int_of_string in
+  let tilewidth = attr "tilewidth" xml int_of_string in
+  let tileheight = attr "tileheight" xml int_of_string in
+  let parallaxoriginx = attr_opt "parallaxoriginx" xml int_of_string in
+  let parallaxoriginy = attr_opt "parallaxoriginy" xml int_of_string in
+  let backgroundcolor = attr_opt "backgroundcolor" xml Color.of_string in
+  let infinite = attr_opt "infinite" xml bool_of_string01 in
+  let properties = child_opt "properties" xml properties_of_xml in
+  let tilesets = children "tileset" xml map_tileset_of_xml in
+  let layers = child_opt "layers" xml layers_of_xml in
+  let variant = map_variant_of_xml xml in
   Map0.make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel
     ~width ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
-    ?backgroundcolor ?infinite ~properties ~tilesets ~layers ~variant ()
+    ?backgroundcolor ?infinite ?properties ~tilesets ?layers ~variant ()

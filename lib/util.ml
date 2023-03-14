@@ -19,18 +19,10 @@ end
 let throw err = raise (Error.Error err)
 let invalid_arg name value = throw (`Invalid_arg (name, value))
 let nested_template () = throw `Nested_template
-let tilecount n_exp n = throw (`Tilecount (n_exp, n))
 let object_not_found id = throw (`Object_not_found id)
-
-let json_parse json msg =
-  let repr = Ezjsonm.value_to_string json in
-  throw (`Json_parse (repr, msg))
-
-let xml_parse (attrs, nodes) msg =
-  let repr = Ezxmlm.to_string [`El ((("", "???"), attrs), nodes)] in
-  throw (`Xml_parse (repr, msg))
-
 let base64 msg = throw (`Base64 msg)
+let json_parse path msg = throw (`Json_parse (path, msg))
+let xml_parse path msg = throw (`Xml_parse (path, msg))
 
 let gzip e =
   let msg = Format.asprintf "%a" Ezgzip.pp_error e in
