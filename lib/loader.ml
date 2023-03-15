@@ -2,8 +2,6 @@ include Loader_intf
 
 module Make () : S = struct
   module State = State.Make ()
-  include State
-
   module Class = Class.Make (State)
   module Customtype = Customtype.Make (State)
   module Enum = Enum.Make (State)
@@ -14,6 +12,8 @@ module Make () : S = struct
   module Template = Template.Make (State)
   module Tile = Tile.Make (State)
   module Tileset = Tileset.Make (State)
+
+  include State
 end
 
 type t = (module S)

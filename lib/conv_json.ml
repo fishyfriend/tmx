@@ -2,6 +2,8 @@ module J = Ezjsonm
 
 open Util.Option_infix
 
+type json = Ezjsonm.value
+
 let wrap name f x =
   try f x with
   | Error.Error (`Json_parse (path, msg)) -> Util.json_parse (name :: path) msg
@@ -12,7 +14,7 @@ let wrap name f x =
 
 let wrap_list f xs = List.mapi (fun i x -> wrap (string_of_int i) f x) xs
 
-(* type json = Ezjsonm.value *)
+let with_json_from_channel ic = wrap "{root}" @@ fun f -> f (J.from_channel ic)
 
 let attr k j f = wrap k (fun j' -> J.find j' [k] |> f) j
 let attr_opt k j f = wrap k (fun j' -> J.find_opt j' [k] >|= wrap k f) j
@@ -118,3 +120,5 @@ let customtype_of_json json =
     | `Class -> `Class (class_of_json json)
     | `Enum -> `Enum (enum_of_json json) in
   Customtype0.make ~id ~name ~variant
+
+let customtypes_of_json json = J.get_list customtype_of_json json

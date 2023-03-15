@@ -2,7 +2,11 @@ module X = Ezxmlm
 
 open Util.Option_infix
 
-let optionalize f x = try Some (f x) with _ -> None
+type xml = Xmlm.attribute list * X.nodes
+
+let attrs xml = fst xml
+let nodes xml = snd xml
+let data xml = X.data_to_string (nodes xml)
 
 let wrap name f x =
   try f x with
@@ -13,11 +17,17 @@ let wrap name f x =
 
 let wrap_list f xs = List.mapi (fun i x -> wrap (string_of_int i) f x) xs
 
-(* type xml = Xmlm.attribute list * nodes *)
+let with_xml_from_channel ic =
+  wrap "{root}" @@ fun f ->
+  let xml =
+    let _dtd, nodes = Ezxmlm.from_channel ic in
+    let filter = function
+      | `El ((_, attrs), nodes) -> Some (attrs, nodes)
+      | _ -> None in
+    List.filter_map filter nodes |> List.hd in
+  f xml
 
-let attrs xml = fst xml
-let nodes xml = snd xml
-let data xml = X.data_to_string (nodes xml)
+let optionalize f x = try Some (f x) with _ -> None
 
 let attr0 k xml = X.get_attr k (attrs xml)
 let attr k xml f = wrap ("@" ^ k) (fun xml -> attr0 k xml |> f) xml
@@ -28,7 +38,8 @@ let attr_opt' k xml = attr_opt k xml Fun.id
 
 let child0 k xml = X.member_with_attr k (nodes xml)
 let child k xml f = wrap k (fun xml -> child0 k xml |> f) xml
-let child' k xml = child k xml Fun.id
+
+(* let child' k xml = child k xml Fun.id *)
 let child_opt k xml f =
   wrap k (fun xml -> optionalize (child0 k) xml >|= f) xml
 let child_opt' k xml = child_opt k xml Fun.id
