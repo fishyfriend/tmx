@@ -80,7 +80,7 @@ val make :
 
 val version : t -> string
 val tiledversion : t -> string option
-val class_ : t -> string
+val class_ : t -> string option
 val renderorder : t -> Renderorder.t
 val compressionlevel : t -> int
 val width : t -> int

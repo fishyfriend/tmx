@@ -18,12 +18,12 @@ let tap f x =
   ignore (f x) ;
   x
 
-let protect f () =
-  try Result.ok (f ()) with
+let protect_result f x =
+  try Result.ok (f x) with
   | Error.Error e -> Result.error e
   | exn -> Result.error (`Other exn)
 
-(* TODO: move these somewhere, perhaps a submodule *)
+let protect_opt f x = try Some (f x) with _ -> None
 
 let throw err = raise (Error.Error err)
 let invalid_arg name value = throw (`Invalid_arg (name, value))

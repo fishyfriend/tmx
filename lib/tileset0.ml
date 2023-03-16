@@ -109,7 +109,7 @@ let make ~name ?class_ ~columns ?objectalignment ?tilerendersize ?fillmode
     variant }
 
 let name t = t.name
-let class_ t = t.class_ |? ""
+let class_ t = t.class_
 let columns t = t.columns
 let grid t = t.grid |? `Orthogonal
 let tilerendersize t = t.tilerendersize |? `Tile

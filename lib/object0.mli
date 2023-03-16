@@ -77,8 +77,8 @@ val make :
   t
 
 val id : t -> int
-val name : t -> string
-val class_ : t -> string
+val name : t -> string option
+val class_ : t -> string option
 val x : t -> float
 val y : t -> float
 val rotation : t -> float

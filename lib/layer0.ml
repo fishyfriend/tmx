@@ -78,7 +78,7 @@ type variant = Variant.t
 
 let id t = t.id |? 0
 let name t = t.name |? ""
-let class_ t = t.class_ |? ""
+let class_ t = t.class_
 let opacity t = t.opacity |? 1.
 let visible t = t.visible |? true
 let tintcolor t = t.tintcolor

@@ -25,7 +25,7 @@ val make :
   t
 
 val id : t -> int
-val class_ : t -> string
+val class_ : t -> string option
 val x : t -> int
 val y : t -> int
 val width : t -> int option

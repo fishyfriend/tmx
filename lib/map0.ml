@@ -107,7 +107,7 @@ let make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
 
 let version t = t.version
 let tiledversion t = t.tiledversion
-let class_ t = t.class_ |? ""
+let class_ t = t.class_
 let renderorder t = t.renderorder |? `Right_down
 let compressionlevel t = t.compressionlevel |? -1
 let width t = t.width

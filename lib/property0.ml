@@ -13,7 +13,13 @@ and value =
 
 module Value = struct type t = value [@@deriving eq, ord, show] end
 
-let make ~name ?propertytype ~value () = {name; propertytype; value}
+let make ~name ?propertytype ~value () =
+  let value =
+    match value with
+    | `Class props -> `Class (List.sort_uniq compare props)
+    | _ -> value in
+  {name; propertytype; value}
+
 let name t = t.name
 let propertytype t = t.propertytype
 let value t = t.value

@@ -27,13 +27,11 @@ let with_xml_from_channel ic =
     List.filter_map filter nodes |> List.hd in
   f xml
 
-let optionalize f x = try Some (f x) with _ -> None
-
 let attr0 k xml = X.get_attr k (attrs xml)
 let attr k xml f = wrap ("@" ^ k) (fun xml -> attr0 k xml |> f) xml
 let attr' k xml = attr k xml Fun.id
 let attr_opt k xml f =
-  wrap ("@" ^ k) (fun xml -> optionalize (attr0 k) xml >|= f) xml
+  wrap ("@" ^ k) (fun xml -> Util.protect_opt (attr0 k) xml >|= f) xml
 let attr_opt' k xml = attr_opt k xml Fun.id
 
 let child0 k xml = X.member_with_attr k (nodes xml)
@@ -41,7 +39,7 @@ let child k xml f = wrap k (fun xml -> child0 k xml |> f) xml
 
 (* let child' k xml = child k xml Fun.id *)
 let child_opt k xml f =
-  wrap k (fun xml -> optionalize (child0 k) xml >|= f) xml
+  wrap k (fun xml -> Util.protect_opt (child0 k) xml >|= f) xml
 let child_opt' k xml = child_opt k xml Fun.id
 
 let children0 k xml = X.members_with_attr k (nodes xml)
@@ -381,7 +379,7 @@ and layers_of_xml xml =
   List.filter_map
     (function
       | `El (((_, name), attrs), nodes) ->
-          optionalize layer_type_of_string name >|= fun type_ ->
+          Util.protect_opt layer_type_of_string name >|= fun type_ ->
           layer_of_xml ~type_ (attrs, nodes)
       | `Data _ -> None )
     (nodes xml)

@@ -69,7 +69,7 @@ val make :
 
 val id : t -> int
 val name : t -> string
-val class_ : t -> string
+val class_ : t -> string option
 val opacity : t -> float
 val visible : t -> bool
 val tintcolor : t -> Color.t option

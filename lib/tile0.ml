@@ -23,7 +23,7 @@ type t =
 [@@deriving eq, ord, show, make]
 
 let id t = t.id
-let class_ t = t.class_ |? ""
+let class_ t = t.class_
 let x t = t.x |? 0
 let y t = t.y |? 0
 let image t = t.image

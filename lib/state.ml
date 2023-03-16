@@ -47,6 +47,11 @@ module Make () : S = struct
   let get_file_exn k = get "files" files_tbl k
   let get_customtype_exn k = get "customtype" customtypes_tbl k
 
+  let get_tileset k = Util.protect_opt get_tileset_exn k
+  let get_template k = Util.protect_opt get_template_exn k
+  let get_file k = Util.protect_opt get_file_exn k
+  let get_customtype k = Util.protect_opt get_customtype_exn k
+
   let with_file fname f =
     if Sys.file_exists fname then In_channel.with_open_text fname f
     else Util.file_not_found fname
@@ -69,6 +74,8 @@ module Make () : S = struct
     Conv_json.(with_json_from_channel ic customtypes_of_json)
     |> Util.tap (List.iter add_customtype_exn)
 
+  (* TODO: adjust GIDs in the loaded map  *)
+  (* we also need to store gid-to-tileset mapping in the state *)
   let load_map_xml_exn fname =
     with_file fname @@ fun ic -> Conv_xml.(with_xml_from_channel ic map_of_xml)
 
@@ -82,4 +89,8 @@ module Make () : S = struct
           | _ -> None )
         cts in
     match c with Some c -> c | None -> Util.not_found "class" name
+
+  let get_class name ~useas = Util.protect_opt (get_class_exn ~useas) name
+
+  let get_tile _gid = failwith "TODO"
 end

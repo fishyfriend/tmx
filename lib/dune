@@ -33,6 +33,8 @@
   object
   object0
   object_intf
+  properties
+  properties_intf
   property
   property0
   property_intf

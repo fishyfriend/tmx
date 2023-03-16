@@ -74,8 +74,8 @@ type t =
 [@@deriving eq, ord, show, make]
 
 let id t = t.id |? 0
-let name t = t.name |? ""
-let class_ t = t.class_ |? ""
+let name t = t.name
+let class_ t = t.class_
 let x t = t.x |? 0.
 let y t = t.y |? 0.
 let rotation t = t.rotation |? 0.

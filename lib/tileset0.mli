@@ -88,7 +88,7 @@ val make :
   t
 
 val name : t -> string
-val class_ : t -> string
+val class_ : t -> string option
 val tilecount : t -> int
 val columns : t -> int
 val objectalignment : t -> Objectalignment.t
