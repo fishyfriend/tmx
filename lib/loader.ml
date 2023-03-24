@@ -21,21 +21,26 @@ module Make () : S = struct
 
   let load_tileset_xml_exn fname =
     with_file fname @@ fun ic ->
-    Conv_xml.(with_xml_from_channel ic tileset_of_xml)
-    |> Util.tap (add_tileset_exn fname)
+    let ts = Conv_xml.(with_xml_from_channel ic tileset_of_xml) in
+    State.(update (add_tileset_exn fname ts)) ;
+    ts
 
   let load_template_xml_exn fname =
     with_file fname @@ fun ic ->
-    Conv_xml.(with_xml_from_channel ic template_of_xml)
-    |> Util.tap (add_template_exn fname)
+    let te = Conv_xml.(with_xml_from_channel ic template_of_xml) in
+    State.(update (add_template_exn fname te)) ;
+    te
 
   let load_file_exn fname =
-    with_file fname In_channel.input_all |> Util.tap (add_file_exn fname)
+    let data = with_file fname In_channel.input_all in
+    State.(update (add_file_exn fname data)) ;
+    data
 
   let load_customtypes_json_exn fname =
     with_file fname @@ fun ic ->
-    Conv_json.(with_json_from_channel ic customtypes_of_json)
-    |> Util.tap (List.iter add_customtype_exn)
+    let cts = Conv_json.(with_json_from_channel ic customtypes_of_json) in
+    List.iter (fun ct -> State.(update (add_customtype_exn ct))) cts ;
+    cts
 
   let load_map_xml_exn fname =
     with_file fname @@ fun ic -> Conv_xml.(with_xml_from_channel ic map_of_xml)

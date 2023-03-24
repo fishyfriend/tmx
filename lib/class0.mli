@@ -10,7 +10,7 @@ module Useas : sig
     | `Tileset
     | `Wangcolor
     | `Wangset ]
-  [@@deriving eq, show]
+  [@@deriving eq, ord, show]
 end
 
 type useas = Useas.t

@@ -13,13 +13,13 @@ end
 
 type t = int32 [@@deriving eq, show]
 
-let max_id = Int32.(to_int @@ lognot Flags.all)
+let max_id = Int32.(lognot Flags.all |> to_int)
 
 let make ?(flags = Flags.empty) id =
   if id < 0 || id > max_id then Util.invalid_arg "id" (string_of_int id) ;
-  Int32.(logor flags @@ of_int id)
+  Int32.(of_int id |> logor flags)
 
-let id t = Int32.(to_int @@ logand t @@ lognot Flags.all)
+let id t = Int32.(lognot Flags.all |> logand t |> to_int)
 let flags t = Int32.logand t Flags.all
 let of_int32 x = x
 let to_int32 t = t

@@ -1,28 +1,10 @@
 module Option_infix = struct
   let ( >>= ) o f = Option.bind o f
   let ( >|= ) o f = Option.map f o
-
   let ( let* ) = ( >>= )
   let ( let+ ) = ( >|= )
-
-  let (( and* ) as ( and+ )) =
-   fun o o' ->
-    let* x = o in
-    let* x' = o' in
-    Some (x, x')
-
   let ( |? ) o default = Option.value o ~default
 end
-
-let rec last xs =
-  match xs with
-  | [] -> raise (Invalid_argument "[]")
-  | [x] -> x
-  | _ :: xs -> last xs
-
-let tap f x =
-  ignore (f x) ;
-  x
 
 let protect_result f x =
   try Result.ok (f x) with

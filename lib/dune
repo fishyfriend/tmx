@@ -40,6 +40,7 @@
   property_intf
   sigs
   state
+  state0
   state_intf
   template
   template0

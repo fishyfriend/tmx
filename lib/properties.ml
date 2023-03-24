@@ -54,13 +54,15 @@ module Make0 (T : PropsType) : S with type t := T.t = struct
     | None -> Util.not_found "property" k
 end
 
-module Make (S : State_intf.S) (T : ClassType) : S with type t := T.t =
+module Make (State : State_intf.S) (T : ClassType) : S with type t := T.t =
 Make0 (struct
   include T
 
   let property_lists t =
     let class_props =
-      class_ t >>= S.get_class ~useas >|= Class0.members |? [] in
+      class_ t
+      >>= State.(read @@ Fun.flip get_class ~useas)
+      >|= Class0.members |? [] in
     let own_props = properties t in
     [class_props; own_props]
 end)

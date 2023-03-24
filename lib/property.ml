@@ -7,7 +7,10 @@ module Make (State : State_intf.S) : S = struct
 
   let value t =
     let value0 = Property0.value t in
-    let ctv = propertytype t >>= State.get_customtype >|= Customtype0.variant in
+    let ctv =
+      propertytype t
+      >>= State.(read @@ Fun.flip get_customtype)
+      >|= Customtype0.variant in
     match ctv with
     | None -> value0
     | Some variant ->
