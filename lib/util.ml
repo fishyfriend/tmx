@@ -14,6 +14,12 @@ module Option_infix = struct
   let ( |? ) o default = Option.value o ~default
 end
 
+let rec last xs =
+  match xs with
+  | [] -> raise (Invalid_argument "[]")
+  | [x] -> x
+  | _ :: xs -> last xs
+
 let tap f x =
   ignore (f x) ;
   x

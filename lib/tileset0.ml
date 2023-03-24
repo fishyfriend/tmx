@@ -128,7 +128,12 @@ let objectalignment t =
 let tilecount t =
   match variant t with
   | `Single single -> Single.tilecount single
-  | `Collection -> List.length (tiles t)
+  | `Collection -> Map.cardinal t.tiles
+
+let max_id t =
+  match variant t with
+  | `Single _ -> tilecount t - 1
+  | `Collection -> Map.fold (fun id _ max_id -> max id max_id) t.tiles 0
 
 let get_tile t id : Tile0.t option =
   match variant t with

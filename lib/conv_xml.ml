@@ -432,10 +432,7 @@ let map_variant_of_xml xml =
 
 let map_tileset_of_xml xml =
   let firstgid = attr "firstgid" xml int_of_string in
-  let source =
-    match attr_opt' "source" xml with
-    | None -> `Embed (tileset_of_xml xml)
-    | Some source -> `File source in
+  let source = attr' "source" xml in
   (firstgid, source)
 
 let map_of_xml xml =

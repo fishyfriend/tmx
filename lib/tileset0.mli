@@ -99,4 +99,5 @@ val grid : t -> Grid.t
 val properties : t -> Property0.t list
 val variant : t -> variant
 val tiles : t -> Tile0.t list
+val max_id : t -> int
 val get_tile : t -> int -> Tile0.t option

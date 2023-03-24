@@ -88,3 +88,8 @@ val properties : t -> Property0.t list
 val shape : t -> shape
 val width : t -> float
 val height : t -> float
+
+val set_shape : t -> shape option -> t
+
+(* TODO: this will go away? *)
+val raw_shape : t -> shape option

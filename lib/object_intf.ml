@@ -2,6 +2,7 @@ module type S = sig
   include module type of Object0
   include Properties_intf.S with type t := t
 
+  (* TODO: probably shouldn't expose {template,tile}_{class,properties} *)
   val template_class : t -> string option
   val template_properties : t -> Property0.t list
   val tile : t -> Tile0.t option

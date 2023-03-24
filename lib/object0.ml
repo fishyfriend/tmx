@@ -84,6 +84,11 @@ let template t = t.template
 let properties t = t.properties
 let shape t = t.shape |? `Rectangle
 
+let set_shape t shape = {t with shape}
+
+(* TODO: this will go away? *)
+let raw_shape t = t.shape
+
 let width t =
   match shape t with
   | `Point -> 0.

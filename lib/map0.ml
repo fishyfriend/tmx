@@ -67,7 +67,7 @@ type t =
     backgroundcolor : Color.t option;
     infinite : bool option;
     properties : Property0.t list;
-    tilesets : (int * [`File of string | `Embed of Tileset0.t]) list;
+    tilesets : (int * string) list;
     layers : Layer0.t list;
     variant : Variant.t }
 [@@deriving eq, ord, show]
@@ -122,6 +122,8 @@ let properties t = t.properties
 let tilesets t = t.tilesets
 let layers t = t.layers
 let variant t = t.variant
+
+let set_layers t layers = {t with layers}
 
 let objects t = List.concat_map Layer0.objects (layers t)
 let get_object t id = List.find_opt (fun o -> Object0.id o = id) (objects t)

@@ -12,8 +12,27 @@ module Make (State : State_intf.S) : S = struct
     template t >>= State.get_template >|= Template0.object_
     >|= Object0.properties |? []
 
-  let tile t = match shape t with `Tile gid -> State.get_tile gid | _ -> None
+  (* TODO: I have added [Object0.raw_shape] temporarily to provide direct
+     access to the shape record field. Possibly *all* "0" types should just be
+     bare records. Put the nice accessors in the "non-0" modules. This would
+     simplify the code structure a lot. We might be able to put record types in
+     the *_intf modules and avoid the need for "0" types entirely.
+     Although...the accessors are certainly handy. *)
+
+  let shape t =
+    let sh =
+      match Object0.raw_shape t with
+      | Some _ as sh -> sh
+      | None ->
+          Object0.template t >>= State.get_template >|= Template0.object_
+          >>= Object0.raw_shape in
+    sh |? `Rectangle
+
+  let tile t =
+    match shape t with `Tile gid -> State.get_object_tile t gid | _ -> None
+
   let tile_class t = tile t >>= Tile0.class_
+
   let tile_properties t = tile t >|= Tile0.properties |? []
 
   let class_ t =

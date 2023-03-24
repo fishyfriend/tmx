@@ -26,6 +26,7 @@ module Objectgroup = struct
   let get_object t id = List.find_opt (fun o -> Object0.id o = id) (objects t)
   let get_object_exn t id =
     match get_object t id with Some o -> o | None -> Util.object_not_found id
+  let set_objects t objects = {t with objects}
 end
 
 type objectgroup = Objectgroup.t
@@ -88,6 +89,7 @@ let parallaxx t = t.parallaxx |? 1.
 let parallaxy t = t.parallaxy |? 1.
 let properties t = t.properties
 let variant t = t.variant
+let set_variant t variant = {t with variant}
 
 let rec objects t =
   match t.variant with

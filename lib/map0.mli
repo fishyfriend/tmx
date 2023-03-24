@@ -72,7 +72,7 @@ val make :
   ?backgroundcolor:Color.t ->
   ?infinite:bool ->
   ?properties:Property0.t list ->
-  ?tilesets:(int * [`Embed of Tileset0.t | `File of string]) list ->
+  ?tilesets:(int * string) list ->
   ?layers:Layer0.t list ->
   variant:variant ->
   unit ->
@@ -92,7 +92,7 @@ val parallaxoriginy : t -> int
 val backgroundcolor : t -> Color.t
 val infinite : t -> bool
 val properties : t -> Property0.t list
-val tilesets : t -> (int * [`File of string | `Embed of Tileset0.t]) list
+val tilesets : t -> (int * string) list
 val layers : t -> Layer0.t list
 val variant : t -> variant
 val objects : t -> Object0.t list
@@ -100,3 +100,5 @@ val get_object : t -> int -> Object0.t option
 val get_object_exn : t -> int -> Object0.t
 val nextlayerid : t -> int
 val nextobjectid : t -> int
+
+val set_layers : t -> Layer0.t list -> t

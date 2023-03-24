@@ -25,6 +25,7 @@ module Objectgroup : sig
   val objects : t -> Object0.t list
   val get_object : t -> int -> Object0.t option
   val get_object_exn : t -> int -> Object0.t
+  val set_objects : t -> Object0.t list -> t
 end
 
 type objectgroup = Objectgroup.t
@@ -79,6 +80,7 @@ val parallaxx : t -> float
 val parallaxy : t -> float
 val properties : t -> Property0.t list
 val variant : t -> variant
+val set_variant : t -> variant -> t
 
 val objects : t -> Object0.t list
 val get_object : t -> int -> Object0.t option
