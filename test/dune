@@ -1,6 +1,6 @@
 (tests
  (libraries alcotest tmx)
- (names test_color test_gid)
- (modules test_color test_gid)
+ (names test_color test_data test_gid)
+ (modules test_color test_data test_gid)
  (action
   (run %{test} -e)))
