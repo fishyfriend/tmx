@@ -17,6 +17,7 @@ type t = {useas : Useas.t list; members : Property0.t list}
 [@@deriving eq, ord, show]
 
 let make ~useas ~members =
+  if useas = [] then Util.invalid_arg "useas" "[]" ;
   let members = List.sort_uniq Property0.compare members in
   {useas; members}
 
