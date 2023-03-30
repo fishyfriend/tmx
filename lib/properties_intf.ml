@@ -19,7 +19,9 @@ end
 
 module type Intf = sig
   module Make0 (T : PropsType) : S with type t := T.t
+  module Make0_strict (T : PropsType) : S with type t := T.t
   module Make (_ : State_intf.S) (T : ClassType) : S with type t := T.t
+  module Make_strict (_ : State_intf.S) (T : ClassType) : S with type t := T.t
 
   (* Override the properties of [ts0] with [ts]. If [strict] is true, exclude
      properties in [ts] that are not in [ts0]. *)
