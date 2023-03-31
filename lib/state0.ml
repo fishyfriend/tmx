@@ -22,27 +22,18 @@ let files t = String_map.bindings t.files
 let customtypes t = String_map.bindings t.customtypes |> List.concat_map snd
 let maps t = String_map.bindings t.maps
 
-let get kind key map =
-  match String_map.find_opt key map with
-  | Some v -> v
-  | None -> Util.not_found kind key
+let get_template k t = String_map.find_opt k t.templates
+let get_file k t = String_map.find_opt k t.files
+let get_customtypes k t = String_map.find_opt k t.customtypes |? []
+let get_map k t = String_map.find_opt k t.maps
 
-let get_template_exn k t = get "template" k t.templates
-let get_file_exn k t = get "files" k t.files
-let get_customtype_exn k t = get "customtype" k t.customtypes |> List.hd
-
-let get_tileset_exn k t =
-  match List.find_opt (fun (_, k', _) -> k' = k) t.tilesets with
-  | Some (firstgid, _, ts) -> (firstgid, ts)
-  | None -> Util.not_found "tileset" k
-
-let get_tileset k t = Util.protect_opt (get_tileset_exn k) t
-let get_template k t = Util.protect_opt (get_template_exn k) t
-let get_file k t = Util.protect_opt (get_file_exn k) t
-let get_customtype k t = Util.protect_opt (get_customtype_exn k) t
+let get_tileset k t =
+  List.find_map
+    (fun (firstgid, k', ts) -> if k' = k then Some (firstgid, ts) else None)
+    t.tilesets
 
 let get_class k t ~useas =
-  let cts = get "class" k t.customtypes in
+  let cts = String_map.find k t.customtypes in
   List.find_map
     (fun ct ->
       match Customtype0.variant ct with
@@ -50,13 +41,8 @@ let get_class k t ~useas =
       | _ -> None )
     cts
 
-let get_class_exn k t ~useas =
-  match get_class k t ~useas with
-  | Some c -> c
-  | None -> Util.not_found "class" k
-
-(* TODO: this is quite inefficient *)
 let get_object_tile o gid t =
+  (* TODO: this is quite inefficient *)
   let id = Gid.id gid in
   let maps = String_map.to_seq t.maps in
   Seq.find_map
@@ -111,9 +97,26 @@ let add kind key value map =
     (function Some _ -> Util.duplicate kind key | None -> Some value)
     map
 
-let add_template_exn k te t =
-  {t with templates = add "template" k te t.templates}
-
+let add_template_exn k e t = {t with templates = add "template" k e t.templates}
 let add_file_exn k data t = {t with files = add "file" k data t.files}
-
 let add_map_exn k m t = {t with maps = add "map" k m t.maps}
+
+let remove_template k t = {t with templates = String_map.remove k t.templates}
+let remove_file k t = {t with files = String_map.remove k t.files}
+let remove_map k t = {t with maps = String_map.remove k t.maps}
+
+let remove_tileset k t =
+  {t with tilesets = List.filter (fun (_, k', _) -> k' <> k) t.tilesets}
+
+let remove_customtypes k t =
+  {t with customtypes = String_map.remove k t.customtypes}
+
+let remove_class k ~useas t =
+  let filter cts =
+    List.filter
+      (fun ct ->
+        match Customtype0.variant ct with
+        | `Class c when List.mem useas (Class0.useas c) -> false
+        | _ -> true )
+      cts in
+  {t with customtypes = String_map.update k (Option.map filter) t.customtypes}
