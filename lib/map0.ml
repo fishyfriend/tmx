@@ -1,4 +1,4 @@
-open Util.Option_infix
+open Util.Option.Infix
 
 module Staggeraxis = struct type t = [`X | `Y] [@@deriving eq, ord, show] end
 

@@ -1,9 +1,11 @@
-module Option_infix = struct
-  let ( >>= ) o f = Option.bind o f
-  let ( >|= ) o f = Option.map f o
-  let ( let* ) = ( >>= )
-  let ( let+ ) = ( >|= )
-  let ( |? ) o default = Option.value o ~default
+module Option = struct
+  include Option
+
+  module Infix = struct
+    let ( >>= ) o f = Option.bind o f
+    let ( >|= ) o f = Option.map f o
+    let ( |? ) o default = Option.value o ~default
+  end
 end
 
 let protect_result f x =

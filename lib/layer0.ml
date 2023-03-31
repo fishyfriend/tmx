@@ -1,4 +1,4 @@
-open Util.Option_infix
+open Util.Option.Infix
 
 module Tilelayer = struct
   type t = {width : int; height : int; data : Data.t option}

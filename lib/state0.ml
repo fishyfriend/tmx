@@ -1,4 +1,4 @@
-open Util.Option_infix
+open Util.Option.Infix
 
 module String_map = Stdlib.Map.Make (String)
 
@@ -66,12 +66,12 @@ let get_object_tile o gid t =
       >|= Map0.tilesets
       >>= List.find_map (fun (firstgid, fname) ->
               if firstgid <= id then
-                let* ts =
+                let ts =
                   List.find_map
                     (fun (_, fname', ts) ->
                       if fname' = fname then Some ts else None )
                     t.tilesets in
-                Tileset0.get_tile ts (id - firstgid)
+                ts >>= Fun.flip Tileset0.get_tile (id - firstgid)
               else None ) )
     maps
 

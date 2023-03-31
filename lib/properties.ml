@@ -1,6 +1,6 @@
 include Properties_intf
 
-open Util.Option_infix
+open Util.Option.Infix
 
 let rec merge_propertys t0 t =
   let name = Property0.name t in

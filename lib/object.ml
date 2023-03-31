@@ -1,6 +1,6 @@
 include Object_intf
 
-open Util.Option_infix
+open Util.Option.Infix
 
 module Make (State : State_intf.S) : S = struct
   include Object0

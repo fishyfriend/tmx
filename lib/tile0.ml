@@ -1,4 +1,4 @@
-open Util.Option_infix
+open Util.Option.Infix
 
 module Frame = struct
   type t = {tileid : int; duration : int} [@@deriving eq, ord, show, make]

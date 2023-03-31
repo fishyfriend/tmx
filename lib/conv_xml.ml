@@ -1,6 +1,6 @@
 module X = Ezxmlm
 
-open Util.Option_infix
+open Util.Option.Infix
 
 type xml = Xmlm.attribute list * X.nodes
 

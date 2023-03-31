@@ -28,8 +28,10 @@ let customtypes =
               prop "c2p3" (`Class [prop "c1p3" (`Float 543.)]) ] ) ] ]
 
 let () =
-  State.update @@ fun s ->
-  List.fold_left (Fun.flip State.add_customtype_exn) s customtypes
+  let module S = State in
+  let module SM = State.Monad in
+  let load ct = SM.update (S.add_customtype_exn ct) in
+  S.run (SM.iter_list load customtypes)
 
 let check_subprop t k v =
   let t' = get_property k t in

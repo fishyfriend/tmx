@@ -1,4 +1,4 @@
-open Util.Option_infix
+open Util.Option.Infix
 
 module Text = struct
   module Halign = struct
