@@ -1,17 +1,14 @@
-module Class0 = Tmx__Class0
-module Customtype0 = Tmx__Customtype0
+open Tmx__
+open Nonbasic.Make ()
 
-module State = Tmx__State.Make ()
-module Property = Tmx__Property.Make (State)
+module P = Property
 
-open Property
+let prop name value = P.make ~name ~value ()
+let prop' name pt value = P.make ~name ~propertytype:pt ~value ()
 
-let prop name value = make ~name ~value ()
-let prop' name pt value = make ~name ~propertytype:pt ~value ()
-
-let class_ name members : Customtype0.t =
-  let variant = `Class (Class0.make ~useas:[`Layer; `Property] ~members) in
-  Customtype0.make ~id:1 ~name ~variant
+let class_ name members : Customtype.t =
+  let variant = `Class (Class.make ~useas:[`Layer; `Property] ~members) in
+  Customtype.make ~id:1 ~name ~variant
 
 let customtypes =
   [ class_ "c1"
@@ -28,14 +25,12 @@ let customtypes =
               prop "c2p3" (`Class [prop "c1p3" (`Float 543.)]) ] ) ] ]
 
 let () =
-  let module S = State in
-  let module SM = State.Monad in
-  let load ct = SM.update (S.add_customtype_exn ct) in
-  S.run (SM.iter_list load customtypes)
+  let load ct = State.update (Context.add_customtype_exn ct) in
+  run_context (State.iter_list load customtypes)
 
 let check_subprop t k v =
-  let t' = get_property k t in
-  Alcotest.(check (option (module Value))) "equal" v (Option.map value t')
+  let t' = P.get_property k t in
+  Alcotest.(check (option (module P.Value))) "equal" v (Option.map P.value t')
 
 let tc_simple =
   Alcotest.test_case "Simple" `Quick @@ fun () ->
@@ -59,8 +54,8 @@ let tc_nested =
                 prop "extra" (`String "xyz") ] ) ] ) in
   check_subprop t "c2p1" (Some (`String "klm")) ;
   check_subprop t "c2p2" (Some (`Object 6)) ;
-  let t' = get_property_exn "c2p3" t in
-  Alcotest.(check (option string)) "equal" (Some "c1") (propertytype t') ;
+  let t' = P.get_property_exn "c2p3" t in
+  Alcotest.(check (option string)) "equal" (Some "c1") (P.propertytype t') ;
   check_subprop t' "c1p1" (Some (`Int 777)) ;
   check_subprop t' "c1p2" (Some (`Float 8.76)) ;
   check_subprop t' "c1p3" (Some (`Int 9)) ;
@@ -78,12 +73,12 @@ let tc_deeply_nested =
                   (`Class
                     [prop "c1p1" (`Float 888.); prop "extra" (`Bool true)] ) ]
               ) ] ) in
-  let t' = get_property_exn "c3p1" t in
-  Alcotest.(check (option string)) "equal" (Some "c2") (propertytype t') ;
+  let t' = P.get_property_exn "c3p1" t in
+  Alcotest.(check (option string)) "equal" (Some "c2") (P.propertytype t') ;
   check_subprop t' "c2p1" (Some (`String "ghi")) ;
   check_subprop t' "c2p2" (Some (`Object 6)) ;
-  let t'' = get_property_exn "c2p3" t' in
-  Alcotest.(check (option string)) "equal" (Some "c1") (propertytype t'') ;
+  let t'' = P.get_property_exn "c2p3" t' in
+  Alcotest.(check (option string)) "equal" (Some "c1") (P.propertytype t'') ;
   check_subprop t'' "c1p1" (Some (`Int 888)) ;
   check_subprop t'' "c1p2" (Some (`Float 7.89)) ;
   check_subprop t'' "c1p3" (Some (`Int 543)) ;

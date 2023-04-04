@@ -1,8 +1,7 @@
 open Tmx
-open Data
 
 let to_int32_list t =
-  let bytes = bytes t in
+  let bytes = Data.bytes t in
   let n = Bytes.length bytes / 4 in
   List.init n @@ fun i -> Bytes.get_int32_ne bytes (i * 4)
 
@@ -13,28 +12,28 @@ let check_constructor ctor input =
 
 let tc_list =
   Alcotest.test_case "From list of GIDs" `Quick @@ fun () ->
-  check_constructor of_int32_list [1l; 0l; 2l; 0l; 0l; 3l; 0l; 0l; 0l; 4l]
+  check_constructor Data.of_int32_list [1l; 0l; 2l; 0l; 0l; 3l; 0l; 0l; 0l; 4l]
 
 let tc_csv =
   Alcotest.test_case "CSV encoding" `Quick @@ fun () ->
-  check_constructor (of_string ~encoding:`Csv) "1,0,2,0,0,\n3,0,0,0,4"
+  check_constructor (Data.of_string ~encoding:`Csv) "1,0,2,0,0,\n3,0,0,0,4"
 
 let tc_base64 =
   Alcotest.test_case "Base64 encoding, uncompressed" `Quick @@ fun () ->
   check_constructor
-    (of_string ~encoding:`Base64)
+    (Data.of_string ~encoding:`Base64)
     "AQAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAABAAAAA=="
 
 let tc_base64_gzip =
   Alcotest.test_case "Base64 encoding, gzip compression" `Quick @@ fun () ->
   check_constructor
-    (of_string ~encoding:`Base64 ~compression:`Gzip)
+    (Data.of_string ~encoding:`Base64 ~compression:`Gzip)
     "H4sIAAAAAAAA/2NkgAAmBgRgZkAFLEAMAH54pl4oAAAA"
 
 let tc_base64_zlib =
   Alcotest.test_case "Base64 encoding, zlib compression" `Quick @@ fun () ->
   check_constructor
-    (of_string ~encoding:`Base64 ~compression:`Zlib)
+    (Data.of_string ~encoding:`Base64 ~compression:`Zlib)
     "eJxjZIAAJgYEYGZABSxADAAA3AAL"
 
 let t_tile =

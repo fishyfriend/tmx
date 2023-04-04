@@ -1,28 +1,27 @@
 open Tmx
-open Gid
 
 let check_consistent flags id =
-  let t = make ~flags id in
-  Alcotest.check (module Flags) "=" flags (Gid.flags t) ;
+  let t = Gid.make ~flags id in
+  Alcotest.check (module Gid.Flags) "=" flags (Gid.flags t) ;
   Alcotest.(check int) "=" id (Gid.id t)
 
 let check_id_rejected id =
   let exn = Error.Error (`Invalid_arg ("id", string_of_int id)) in
-  Alcotest.check_raises "exn" exn @@ fun () -> ignore (make id)
+  Alcotest.check_raises "exn" exn @@ fun () -> ignore (Gid.make id)
 
 let tc_bits =
   Alcotest.test_case "Flags and ID are independent" `Quick @@ fun () ->
-  check_consistent Flags.all 0 ;
-  check_consistent Flags.all max_id ;
-  check_consistent Flags.empty 0 ;
-  check_consistent Flags.empty max_id
+  check_consistent Gid.Flags.all 0 ;
+  check_consistent Gid.Flags.all Gid.max_id ;
+  check_consistent Gid.Flags.empty 0 ;
+  check_consistent Gid.Flags.empty Gid.max_id
 
 let tc_bounds =
   Alcotest.test_case "Enforce ID bounds" `Quick @@ fun () ->
   check_id_rejected (-1) ;
-  check_id_rejected (max_id + 1) ;
-  ignore (make 0) ;
-  ignore (make max_id)
+  check_id_rejected (Gid.max_id + 1) ;
+  ignore (Gid.make 0) ;
+  ignore Gid.(make max_id)
 
 let t_all = ("All", [tc_bits; tc_bounds])
 

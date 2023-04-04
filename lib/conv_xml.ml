@@ -1,5 +1,6 @@
 module X = Ezxmlm
 
+open Basic
 open Util.Option.Infix
 
 type xml = Xmlm.attribute list * X.nodes
@@ -80,7 +81,7 @@ let rec property_of_xml xml =
     | `Object -> `Object (aux int_of_string |? 0)
     | `Class -> `Class (child_opt "properties" xml properties_of_xml |? [])
   in
-  Property0.make ~name ?propertytype ~value ()
+  Property.make ~name ?propertytype ~value ()
 
 and properties_of_xml xml = children "property" xml property_of_xml
 
@@ -112,8 +113,8 @@ let text_of_xml xml =
   let kerning = attr_opt "kerning" xml bool_of_string01 in
   let halign = attr_opt "halign" xml halign_of_string in
   let valign = attr_opt "valign" xml valign_of_string in
-  Object0.Text.make ?fontfamily ?pixelsize ?wrap ?color ?bold ?italic
-    ?underline ?strikeout ?kerning ?halign ?valign text
+  Object.Text.make ?fontfamily ?pixelsize ?wrap ?color ?bold ?italic ?underline
+    ?strikeout ?kerning ?halign ?valign text
 
 let polygon_of_xml xml =
   let point_of_string s = Scanf.sscanf s "%f,%f" @@ fun x y -> (x, y) in
@@ -149,7 +150,7 @@ let object_of_xml xml =
   let visible = attr_opt "visible" xml bool_of_string01 in
   let properties = child_opt "properties" xml properties_of_xml in
   let shape = shape_of_xml xml in
-  Object0.make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible
+  Object.make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible
     ?properties ?shape ()
 
 let encoding_of_string s =
@@ -226,7 +227,7 @@ let animation_of_xml xml =
   children "frame" xml @@ fun xml' ->
   let tileid = attr "tileid" xml' int_of_string in
   let duration = attr "duration" xml' int_of_string in
-  Tile0.Frame.make ~tileid ~duration
+  Tile.Frame.make ~tileid ~duration
 
 let tile_of_xml xml =
   let id = attr "id" xml int_of_string in
@@ -241,7 +242,7 @@ let tile_of_xml xml =
     child_opt "objectgroup" xml @@ fun xml' ->
     children "object" xml' object_of_xml in
   let animation = child_opt "animation" xml animation_of_xml in
-  Tile0.make ~id ?class_ ?x ?y ?width ?height ~properties ?image ?objectgroup
+  Tile.make ~id ?class_ ?x ?y ?width ?height ~properties ?image ?objectgroup
     ?animation ()
 
 let objectalignment_of_string s =
@@ -273,7 +274,7 @@ let fillmode_of_string s =
 let tileoffset_of_xml xml =
   let x = attr_opt "x" xml int_of_string in
   let y = attr_opt "y" xml int_of_string in
-  Tileset0.Tileoffset.make ?x ?y ()
+  Tileset.Tileoffset.make ?x ?y ()
 
 let grid_of_xml xml =
   match attr_opt' "orientation" xml with
@@ -291,7 +292,7 @@ let single_of_xml xml =
   let spacing = attr_opt "spacing" xml int_of_string in
   let margin = attr_opt "margin" xml int_of_string in
   let image = image_of_xml xml in
-  Tileset0.Single.make ~tilecount ~tilewidth ~tileheight ?spacing ?margin image
+  Tileset.Single.make ~tilecount ~tilewidth ~tileheight ?spacing ?margin image
 
 let tileset_of_xml xml =
   let name = attr' "name" xml in
@@ -309,7 +310,7 @@ let tileset_of_xml xml =
     match child_opt' "image" xml with
     | Some xml' -> `Single (single_of_xml xml')
     | None -> `Collection in
-  Tileset0.make ~name ?class_ ~columns ?objectalignment ?tilerendersize
+  Tileset.make ~name ?class_ ~columns ?objectalignment ?tilerendersize
     ?fillmode ?tileoffset ?grid ?properties ~variant tiles
 
 let template_of_xml xml =
@@ -319,7 +320,7 @@ let template_of_xml xml =
     let firstgid = attr "firstgid" xml' int_of_string in
     (firstgid, source) in
   let object_ = child "object" xml object_of_xml in
-  Template0.make ?tileset object_
+  Template.make ?tileset object_
 
 let tilelayer_of_xml xml =
   let width = attr "width" xml int_of_string in
@@ -327,7 +328,7 @@ let tilelayer_of_xml xml =
   let data =
     child_opt "data" xml @@ fun xml ->
     data_of_xml_chunked ~dims:(width, height) xml in
-  Layer0.Tilelayer.make ~width ~height ?data ()
+  Layer.Tilelayer.make ~width ~height ?data ()
 
 let draworder_of_string s =
   match s with
@@ -338,13 +339,13 @@ let draworder_of_string s =
 let objectgroup_of_xml xml =
   let draworder = attr_opt "draworder" xml draworder_of_string in
   let objects = children "object" xml object_of_xml in
-  Layer0.Objectgroup.make ?draworder ~objects ()
+  Layer.Objectgroup.make ?draworder ~objects ()
 
 let imagelayer_of_xml xml =
   let image = child_opt "image" xml image_of_xml in
   let repeatx = attr_opt "repeatx" xml bool_of_string01 in
   let repeaty = attr_opt "repeaty" xml bool_of_string01 in
-  Layer0.Imagelayer.make ?image ?repeatx ?repeaty ()
+  Layer.Imagelayer.make ?image ?repeatx ?repeaty ()
 
 let layer_type_of_string s =
   match s with
@@ -372,7 +373,7 @@ let rec layer_of_xml ~type_ xml =
     | `Objectgroup -> `Objectgroup (objectgroup_of_xml xml)
     | `Imagelayer -> `Imagelayer (imagelayer_of_xml xml)
     | `Group -> `Group (layers_of_xml xml) in
-  Layer0.make ?id ?name ?class_ ?opacity ?visible ?tintcolor ?offsetx ?offsety
+  Layer.make ?id ?name ?class_ ?opacity ?visible ?tintcolor ?offsetx ?offsety
     ?parallaxx ?parallaxy ?properties ~variant ()
 
 and layers_of_xml xml =
@@ -415,13 +416,13 @@ let orientation_of_string s =
 let staggered_of_xml xml =
   let staggeraxis = attr "staggeraxis" xml staggeraxis_of_string in
   let staggerindex = attr "staggerindex" xml staggerindex_of_string in
-  Map0.Staggered.make ~staggeraxis ~staggerindex
+  Map.Staggered.make ~staggeraxis ~staggerindex
 
 let hexagonal_of_xml xml =
   let staggeraxis = attr "staggeraxis" xml staggeraxis_of_string in
   let staggerindex = attr "staggerindex" xml staggerindex_of_string in
   let hexsidelength = attr "hexsidelength" xml int_of_string in
-  Map0.Hexagonal.make ~hexsidelength ~staggeraxis ~staggerindex
+  Map.Hexagonal.make ~hexsidelength ~staggeraxis ~staggerindex
 
 let map_variant_of_xml xml =
   match attr "orientation" xml orientation_of_string with
@@ -453,6 +454,6 @@ let map_of_xml xml =
   let tilesets = children "tileset" xml map_tileset_of_xml in
   let layers = child_opt "layers" xml layers_of_xml in
   let variant = map_variant_of_xml xml in
-  Map0.make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel
-    ~width ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
+  Map.make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
+    ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
     ?backgroundcolor ?infinite ?properties ~tilesets ?layers ~variant ()

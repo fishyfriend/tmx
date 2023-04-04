@@ -1,13 +1,14 @@
+open Basic
 open Util.Option.Infix
 
 module String_map = Stdlib.Map.Make (String)
 
 type t =
-  { tilesets : (int * string * Tileset0.t) list;
-    templates : Template0.t String_map.t;
+  { tilesets : (int * string * Tileset.t) list;
+    templates : Template.t String_map.t;
     files : string String_map.t;
-    customtypes : Customtype0.t list String_map.t;
-    maps : Map0.t String_map.t }
+    customtypes : Customtype.t list String_map.t;
+    maps : Map.t String_map.t }
 
 let empty =
   { tilesets = [];
@@ -36,8 +37,8 @@ let get_class k t ~useas =
   let cts = String_map.find k t.customtypes in
   List.find_map
     (fun ct ->
-      match Customtype0.variant ct with
-      | `Class c when List.mem useas (Class0.useas c) -> Some c
+      match Customtype.variant ct with
+      | `Class c when List.mem useas (Class.useas c) -> Some c
       | _ -> None )
     cts
 
@@ -47,9 +48,9 @@ let get_object_tile o gid t =
   let maps = String_map.to_seq t.maps in
   Seq.find_map
     (fun (_, m) ->
-      Object0.id o |> Map0.get_object m
+      Object.id o |> Map.get_object m
       >>= (function o' when o' == o -> Some m | _ -> None)
-      >|= Map0.tilesets
+      >|= Map.tilesets
       >>= List.find_map (fun (firstgid, fname) ->
               if firstgid <= id then
                 let ts =
@@ -57,7 +58,7 @@ let get_object_tile o gid t =
                     (fun (_, fname', ts) ->
                       if fname' = fname then Some ts else None )
                     t.tilesets in
-                ts >>= Fun.flip Tileset0.get_tile (id - firstgid)
+                ts >>= Fun.flip Tileset.get_tile (id - firstgid)
               else None ) )
     maps
 
@@ -70,11 +71,11 @@ let add_tileset_exn k ts t =
          | [] -> 1
          | xs ->
              let firstgid0, _, ts0 = last xs in
-             firstgid0 + Tileset0.max_id ts0 in
+             firstgid0 + Tileset.max_id ts0 in
        t.tilesets @ [(firstgid, k, ts)] ) }
 
 let add_customtype_exn ct t =
-  let name = Customtype0.name ct in
+  let name = Customtype.name ct in
   { t with
     customtypes =
       String_map.update name
@@ -82,9 +83,9 @@ let add_customtype_exn ct t =
           | None -> Some [ct]
           | Some sibs ->
               let has_conflict =
-                let useas ct : Class0.useas list =
-                  match Customtype0.variant ct with
-                  | `Class c -> Class0.useas c
+                let useas ct : Class.useas list =
+                  match Customtype.variant ct with
+                  | `Class c -> Class.useas c
                   | `Enum _ -> [`Property] in
                 let conjoint xs ys = List.exists (fun x -> List.mem x ys) xs in
                 conjoint (List.concat_map useas sibs) (useas ct) in
@@ -115,8 +116,8 @@ let remove_class k ~useas t =
   let filter cts =
     List.filter
       (fun ct ->
-        match Customtype0.variant ct with
-        | `Class c when List.mem useas (Class0.useas c) -> false
+        match Customtype.variant ct with
+        | `Class c when List.mem useas (Class.useas c) -> false
         | _ -> true )
       cts in
   {t with customtypes = String_map.update k (Option.map filter) t.customtypes}

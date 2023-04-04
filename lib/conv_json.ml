@@ -1,5 +1,6 @@
 module J = Ezjsonm
 
+open Basic
 open Util.Option.Infix
 
 type json = Ezjsonm.value
@@ -31,7 +32,7 @@ and property_of_dict_item (name, json) =
   wrap name
     (fun json ->
       let value = property_value_of_json json in
-      Property0.make ~name ~value () )
+      Property.make ~name ~value () )
     json
 
 let property_type_of_json json =
@@ -63,7 +64,7 @@ let property_of_json json =
     | `File -> `File (aux J.get_string |? ".")
     | `Object -> `Object (aux J.get_int |? 0)
     | `Class -> aux property_value_of_json |? `Class [] in
-  Property0.make ~name ?propertytype ~value ()
+  Property.make ~name ?propertytype ~value ()
 
 (* Empirically, some undocumented Tiled JSON formats use camel case keys. *)
 let lowercase_keys json =
@@ -90,7 +91,7 @@ let class_of_json json =
   let members =
     attr "members" json @@ fun json' ->
     wrap_list property_of_json (J.get_list Fun.id json') in
-  Class0.make ~useas ~members
+  Class.make ~useas ~members
 
 let enum_storagetype_of_json json =
   match J.get_string json with
@@ -103,7 +104,7 @@ let enum_of_json json =
   let storagetype = attr "storagetype" json enum_storagetype_of_json in
   let valuesasflags = attr "valuesasflags" json J.get_bool in
   let values = attr "values" json J.get_strings in
-  Enum0.make ~storagetype ~valuesasflags values
+  Enum.make ~storagetype ~valuesasflags values
 
 let customtype_type_of_json json =
   match J.get_string json with
@@ -119,6 +120,6 @@ let customtype_of_json json =
     match attr "type" json customtype_type_of_json with
     | `Class -> `Class (class_of_json json)
     | `Enum -> `Enum (enum_of_json json) in
-  Customtype0.make ~id ~name ~variant
+  Customtype.make ~id ~name ~variant
 
 let customtypes_of_json json = J.get_list customtype_of_json json
