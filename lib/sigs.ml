@@ -534,6 +534,14 @@ module type S = sig
     val storagetype : t -> Storagetype.t
     val valuesasflags : t -> bool
     val values : t -> string list
+
+    val read_as_string :
+      t -> [> `String of string | `Int of int] -> string option
+
+    val read_as_int : t -> [> `String of string | `Int of int] -> int option
+
+    val read_as_alist :
+      t -> [> `String of string | `Int of int] -> (string * bool) list option
   end
 
   module Customtype : sig

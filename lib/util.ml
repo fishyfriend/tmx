@@ -1,6 +1,4 @@
 module Option = struct
-  include Option
-
   module Infix = struct
     let ( >>= ) o f = Option.bind o f
     let ( >|= ) o f = Option.map f o
