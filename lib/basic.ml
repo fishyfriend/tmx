@@ -1,60 +1,13 @@
 open Util.Option.Infix
 
-module type Properties0 = sig
-  type property
-  type t
+module Property = struct
+  include Property0
 
-  val properties : t -> property list
-  val get_property : string -> t -> property option
-  val get_property_exn : string -> t -> property
-end
-
-module Property0 = struct
-  type t = {name : string; propertytype : string option; value : value}
-
-  and value =
-    [ `String of string
-    | `Int of int
-    | `Float of float
-    | `Bool of bool
-    | `Color of Color.t
-    | `File of string
-    | `Object of int
-    | `Class of t list ]
-  [@@deriving eq, ord, show]
-
-  module Value = struct type t = value [@@deriving eq, ord, show] end
-
-  let make ~name ?propertytype ~value () =
-    let value =
-      match value with
-      | `Class props -> `Class (List.sort_uniq compare props)
-      | _ -> value in
-    {name; propertytype; value}
-
-  let name t = t.name
-  let propertytype t = t.propertytype
-  let value t = t.value
+  let class_ t = match value t with `Class _ -> propertytype t | _ -> None
   let properties t = match value t with `Class props -> props | _ -> []
+
+  include (val Props.make_shallow properties)
 end
-
-module type Properties = Properties0 with type property := Property0.t
-
-module MakeProps (T : sig
-  type t val properties : t -> Property0.t list
-end) : Properties with type t := T.t = struct
-  let properties t = T.properties t
-
-  let get_property k t =
-    List.find_opt (fun p -> Property0.name p = k) (properties t)
-
-  let get_property_exn k t =
-    match get_property k t with
-    | Some p -> p
-    | None -> Util.not_found "property" k
-end
-
-module Property = struct include Property0 include MakeProps (Property0) end
 
 module Object = struct
   module Text = struct
@@ -165,7 +118,7 @@ module Object = struct
         abs_float (ymax -. ymin)
     | _ -> 0.
 
-  include MakeProps (struct type nonrec t = t let properties = properties end)
+  include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
 module Layer = struct
@@ -277,7 +230,7 @@ module Layer = struct
   let get_object_exn t id =
     match get_object t id with Some o -> o | None -> Util.object_not_found id
 
-  include MakeProps (struct type nonrec t = t let properties = properties end)
+  include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
 module Tile = struct
@@ -328,7 +281,7 @@ module Tile = struct
   let set_width t width = {t with width}
   let set_height t height = {t with height}
 
-  include MakeProps (struct type nonrec t = t let properties = properties end)
+  include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
 module Tileset = struct
@@ -494,7 +447,7 @@ module Tileset = struct
           >|= Fun.flip Tile.set_width (Some width)
           >|= Fun.flip Tile.set_height (Some height)
 
-  include MakeProps (struct type nonrec t = t let properties = properties end)
+  include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
 module Map = struct
@@ -639,7 +592,7 @@ module Map = struct
           id (Layer.objects l) )
       0 (layers t)
 
-  include MakeProps (struct type nonrec t = t let properties = properties end)
+  include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
 module Template = struct

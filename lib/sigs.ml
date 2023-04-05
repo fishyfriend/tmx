@@ -1,41 +1,53 @@
-module type Properties0 = sig
-  type property
+module type ClassT = sig
   type t
+
+  val class_ : t -> string option
+end
+
+module type PropsT = sig
+  type t
+  type property
 
   val properties : t -> property list
   val get_property : string -> t -> property option
   val get_property_exn : string -> t -> property
 end
 
-module type S = sig
-  module Property : sig
-    type t [@@deriving eq, ord, show]
+module type StdT = sig
+  type t
 
-    module Value : sig
-      type nonrec t =
-        [ `String of string
-        | `Int of int
-        | `Float of float
-        | `Bool of bool
-        | `Color of Color.t
-        | `File of string
-        | `Object of int
-        | `Class of t list ]
-      [@@deriving eq, ord, show]
-    end
+  include ClassT with type t := t
+  include PropsT with type t := t
+end
 
-    type value = Value.t
+module type Property0 = sig
+  type t [@@deriving eq, ord, show]
 
-    val make :
-      name:string -> ?propertytype:string -> value:Value.t -> unit -> t
-    val name : t -> string
-    val propertytype : t -> string option
-    val value : t -> Value.t
-
-    include Properties0 with type property := t and type t := t
+  module Value : sig
+    type nonrec t =
+      [ `String of string
+      | `Int of int
+      | `Float of float
+      | `Bool of bool
+      | `Color of Color.t
+      | `File of string
+      | `Object of int
+      | `Class of t list ]
+    [@@deriving eq, ord, show]
   end
 
-  module type Properties = Properties0 with type property := Property.t
+  type value = Value.t
+
+  val make : name:string -> ?propertytype:string -> value:Value.t -> unit -> t
+  val name : t -> string
+  val propertytype : t -> string option
+  val value : t -> Value.t
+end
+
+module type S = sig
+  module Property : sig
+    include Property0 include StdT with type t := t and type property := t
+  end
 
   module Object : sig
     module Text : sig
@@ -118,7 +130,6 @@ module type S = sig
 
     val id : t -> int
     val name : t -> string option
-    val class_ : t -> string option
     val x : t -> float
     val y : t -> float
     val rotation : t -> float
@@ -130,7 +141,7 @@ module type S = sig
 
     val set_shape : t -> shape option -> t
 
-    include Properties with type t := t
+    include StdT with type t := t and type property := Property.t
   end
 
   module Layer : sig
@@ -206,7 +217,6 @@ module type S = sig
 
     val id : t -> int
     val name : t -> string
-    val class_ : t -> string option
     val opacity : t -> float
     val visible : t -> bool
     val tintcolor : t -> Color.t option
@@ -221,7 +231,7 @@ module type S = sig
     val get_object : t -> int -> Object.t option
     val get_object_exn : t -> int -> Object.t
 
-    include Properties with type t := t
+    include StdT with type t := t and type property := Property.t
   end
 
   module Tile : sig
@@ -252,7 +262,6 @@ module type S = sig
       t
 
     val id : t -> int
-    val class_ : t -> string option
     val x : t -> int
     val y : t -> int
     val width : t -> int option
@@ -267,7 +276,7 @@ module type S = sig
     val set_width : t -> int option -> t
     val set_height : t -> int option -> t
 
-    include Properties with type t := t
+    include StdT with type t := t and type property := Property.t
   end
 
   module Tileset : sig
@@ -362,7 +371,6 @@ module type S = sig
       t
 
     val name : t -> string
-    val class_ : t -> string option
     val tilecount : t -> int
     val columns : t -> int
     val objectalignment : t -> Objectalignment.t
@@ -375,7 +383,7 @@ module type S = sig
     val max_id : t -> int
     val get_tile : t -> int -> Tile.t option
 
-    include Properties with type t := t
+    include StdT with type t := t and type property := Property.t
   end
 
   module Map : sig
@@ -461,7 +469,6 @@ module type S = sig
 
     val version : t -> string
     val tiledversion : t -> string option
-    val class_ : t -> string option
     val renderorder : t -> Renderorder.t
     val compressionlevel : t -> int
     val width : t -> int
@@ -483,7 +490,7 @@ module type S = sig
 
     val set_layers : t -> Layer.t list -> t
 
-    include Properties with type t := t
+    include StdT with type t := t and type property := Property.t
   end
 
   module Template : sig

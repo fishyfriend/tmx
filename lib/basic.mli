@@ -1,1 +1,1 @@
-include Sigs.S
+include Sigs.S with type Property.t = Property0.t
