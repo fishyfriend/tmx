@@ -130,9 +130,6 @@ module type S = sig
 
     val set_shape : t -> shape option -> t
 
-    (* TODO: this will go away? *)
-    val raw_shape : t -> shape option
-
     include Properties with type t := t
   end
 

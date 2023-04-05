@@ -139,22 +139,13 @@ module Make () = struct
       >>= Fun.flip Context.get_template !the_context
       >|= Basic.Template.object_ >|= properties |? []
 
-    (* TODO: I have added [Object0.raw_shape] temporarily to provide direct
-       access to the shape record field. Possibly *all* "0" types should just
-       be bare records. Put the nice accessors in the "non-0" modules. This
-       would simplify the code structure a lot. We might be able to put record
-       types in the *_intf modules and avoid the need for "0" types entirely.
-       Although...the accessors are certainly handy. *)
-
     let shape t =
-      let sh =
-        match raw_shape t with
-        | Some _ as sh -> sh
-        | None ->
-            template t
-            >>= Fun.flip Context.get_template !the_context
-            >|= Basic.Template.object_ >>= raw_shape in
-      sh |? `Rectangle
+      match shape t with
+      | `Rectangle ->
+          template t
+          >>= (fun tem -> read_context (Context.get_template tem))
+          >|= Basic.Template.object_ >|= shape |? `Rectangle
+      | sh -> sh
 
     let tile t =
       match shape t with

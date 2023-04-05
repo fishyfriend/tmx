@@ -143,9 +143,6 @@ module Object = struct
 
   let set_shape t shape = {t with shape}
 
-  (* TODO: this will go away? *)
-  let raw_shape t = t.shape
-
   let width t =
     match shape t with
     | `Point -> 0.
