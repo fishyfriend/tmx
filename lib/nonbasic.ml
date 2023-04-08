@@ -10,10 +10,10 @@ module Make () = struct
 
   let read_context state = run_context (State.read state)
 
-  module type StdT = Sigs.StdT with type property := Property0.t
-  type 'a std = (module StdT with type t = 'a)
+  module type ClassPropsT = Sigs.ClassPropsT with type property := Property0.t
+  type 'a class_props = (module ClassPropsT with type t = 'a)
 
-  let make_std_plists (type a) ((module T) : a std) ~useas (t : a) =
+  let make_std_plists (type a) ((module T) : a class_props) ~useas (t : a) =
     let class_props =
       T.class_ t
       >>= (fun c -> read_context (Context.get_class ~useas c))
@@ -21,7 +21,7 @@ module Make () = struct
     let own_props = T.properties t in
     [class_props; own_props]
 
-  let make_std_props (type a) ((module T) : a std) ~useas : a Props.t =
+  let make_std_props (type a) ((module T) : a class_props) ~useas : a Props.t =
     Props.make_deep ~strict:false @@ make_std_plists (module T) ~useas
 
   module Property = struct

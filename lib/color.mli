@@ -1,4 +1,4 @@
-type t [@@deriving eq, ord, show]
+include Sigs0.StdT
 
 val argb : int -> int -> int -> int -> t
 val rgb : int -> int -> int -> t

@@ -1,16 +1,20 @@
 module Encoding : sig
-  type t = [`Base64 | `Csv] [@@deriving eq, ord, show]
+  type t = [`Base64 | `Csv]
+
+  include Sigs0.StdT with type t := t
 end
 
 type encoding = Encoding.t
 
 module Compression : sig
-  type t = [`Gzip | `Zlib | `Zstd] [@@deriving eq, ord, show]
+  type t = [`Gzip | `Zlib | `Zstd]
+
+  include Sigs0.StdT with type t := t
 end
 
 type compression = Compression.t
 
-type t [@@deriving eq, ord, show]
+include Sigs0.StdT
 
 val make : ?encoding:encoding -> ?compression:compression -> bytes -> t
 val create : ?encoding:encoding -> ?compression:compression -> int -> t

@@ -1,17 +1,20 @@
 module Format : sig
-  type t = [`Bmp | `Gif | `Jpg | `Png] [@@deriving eq, ord, show]
+  type t = [`Bmp | `Gif | `Jpg | `Png]
+
+  include Sigs0.StdT with type t := t
 end
 
 type format = Format.t
 
 module Source : sig
   type t = [`File of string | `Embed of Format.t * Data.t]
-  [@@deriving eq, ord, show]
+
+  include Sigs0.StdT with type t := t
 end
 
 type source = Source.t
 
-type t [@@deriving eq, ord, show]
+include Sigs0.StdT
 
 val make :
   source:Source.t -> ?trans:Color.t -> ?width:int -> ?height:int -> unit -> t

@@ -1,5 +1,5 @@
 module Flags : sig
-  type t [@@deriving eq, ord, show]
+  include Sigs0.StdT
 
   val ( + ) : t -> t -> t
   val test : t -> t -> bool
@@ -12,7 +12,7 @@ module Flags : sig
   val empty : t
 end
 
-type t [@@deriving eq, ord, show]
+include Sigs0.StdT
 
 val make : ?flags:Flags.t -> int -> t
 val id : t -> int

@@ -10,6 +10,7 @@ type t =
   | `Duplicate of string * string
   | `Not_found of string * string
   | `Other of exn ]
-[@@deriving eq, ord, show]
+
+include Sigs0.StdT with type t := t
 
 type exn += Error of t
