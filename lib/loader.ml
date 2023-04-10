@@ -1,3 +1,8 @@
+(* TODO: deal with file paths *)
+(* TODO: include the filename in parse error messages. *)
+(* TODO: allow to fail gracefully when unable to autoload a resource file. make
+   this behavior configurable. *)
+
 module C = Context
 module St = State
 

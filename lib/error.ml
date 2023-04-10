@@ -14,13 +14,13 @@ type t =
 let equal t t' = t = t'
 let compare t t' = compare t t'
 
-let rec show_path segs ~sep =
-  match segs with
-  | [] -> ""
-  | seg :: segs ->
-    ( match int_of_string_opt seg with
-    | Some i -> Format.sprintf "%s[%d]" (show_path segs ~sep) i
-    | None -> Format.sprintf "%s%c%s" (show_path segs ~sep) sep seg )
+let show_path segs ~sep =
+  List.fold_left
+    (fun s seg ->
+      match int_of_string_opt seg with
+      | Some i -> Format.sprintf "%s[%d]" s i
+      | None -> if s = "" then seg else Format.sprintf "%s%c%s" s sep seg )
+    "" segs
 
 let show t =
   let open Format in

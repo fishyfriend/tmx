@@ -236,13 +236,13 @@ let tile_of_xml xml =
   let y = attr_opt "y" xml int_of_string in
   let width = attr_opt "width" xml int_of_string in
   let height = attr_opt "height" xml int_of_string in
-  let properties = child "properties" xml properties_of_xml in
+  let properties = child_opt "properties" xml properties_of_xml in
   let image = child_opt "image" xml image_of_xml in
   let objectgroup =
     child_opt "objectgroup" xml @@ fun xml' ->
     children "object" xml' object_of_xml in
   let animation = child_opt "animation" xml animation_of_xml in
-  Tile.make ~id ?class_ ?x ?y ?width ?height ~properties ?image ?objectgroup
+  Tile.make ~id ?class_ ?x ?y ?width ?height ?properties ?image ?objectgroup
     ?animation ()
 
 let objectalignment_of_string s =
@@ -291,7 +291,7 @@ let single_of_xml xml =
   let tileheight = attr "tileheight" xml int_of_string in
   let spacing = attr_opt "spacing" xml int_of_string in
   let margin = attr_opt "margin" xml int_of_string in
-  let image = image_of_xml xml in
+  let image = child "image" xml image_of_xml in
   Tileset.Single.make ~tilecount ~tilewidth ~tileheight ?spacing ?margin image
 
 let tileset_of_xml xml =
@@ -308,7 +308,7 @@ let tileset_of_xml xml =
   let tiles = children "tile" xml tile_of_xml in
   let variant =
     match child_opt' "image" xml with
-    | Some xml' -> `Single (single_of_xml xml')
+    | Some _ -> `Single (single_of_xml xml)
     | None -> `Collection in
   Tileset.make ~name ?class_ ~columns ?objectalignment ?tilerendersize
     ?fillmode ?tileoffset ?grid ?properties ~variant tiles
@@ -433,8 +433,11 @@ let map_variant_of_xml xml =
 
 let map_tileset_of_xml xml =
   let firstgid = attr "firstgid" xml int_of_string in
-  let source = attr' "source" xml in
-  (firstgid, source)
+  match attr_opt' "source" xml with
+  | Some source -> (firstgid, source)
+  | None ->
+      Util.xml_parse []
+        "Missing attribute \"source\" (embedded tilesets are not supported)"
 
 let map_of_xml xml =
   let version = attr' "version" xml in

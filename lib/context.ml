@@ -34,7 +34,7 @@ let get_tileset k t =
     t.tilesets
 
 let get_class k t ~useas =
-  let cts = String_map.find k t.customtypes in
+  String_map.find_opt k t.customtypes >>= fun cts ->
   List.find_map
     (fun ct ->
       match Customtype.variant ct with
