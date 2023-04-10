@@ -9,9 +9,9 @@ and value =
   | `File of string
   | `Object of int
   | `Class of t list ]
-[@@deriving eq, ord, show]
+[@@deriving eq, ord, show { with_path = false }]
 
-module Value = struct type t = value [@@deriving eq, ord, show] end
+module Value = struct type t = value [@@deriving eq, ord, show { with_path = false }] end
 
 let make ~name ?propertytype ~value () =
   let value =

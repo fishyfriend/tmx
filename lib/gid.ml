@@ -1,5 +1,5 @@
 module Flags = struct
-  type t = int32 [@@deriving eq, ord, show]
+  type t = int32 [@@deriving eq, ord, show { with_path = false }]
 
   let ( + ) t t' = Int32.logor t t'
   let test t t' = Int32.logand t t' <> 0l
@@ -11,7 +11,7 @@ module Flags = struct
   let empty = 0l
 end
 
-type t = int32 [@@deriving eq, show]
+type t = int32 [@@deriving eq, show { with_path = false }]
 
 let max_id = Int32.(lognot Flags.all |> to_int)
 

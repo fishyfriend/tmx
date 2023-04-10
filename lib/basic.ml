@@ -12,13 +12,13 @@ end
 module Object = struct
   module Text = struct
     module Halign = struct
-      type t = [`Center | `Right | `Justify | `Left] [@@deriving eq, ord, show]
+      type t = [`Center | `Right | `Justify | `Left] [@@deriving eq, ord, show { with_path = false }]
     end
 
     type halign = Halign.t
 
     module Valign = struct
-      type t = [`Center | `Bottom | `Top] [@@deriving eq, ord, show]
+      type t = [`Center | `Bottom | `Top] [@@deriving eq, ord, show { with_path = false }]
     end
 
     type valign = Valign.t
@@ -36,7 +36,7 @@ module Object = struct
         kerning : bool option;
         halign : Halign.t option;
         valign : Valign.t option }
-    [@@deriving eq, ord, show, make]
+    [@@deriving eq, ord, show { with_path = false }, make]
 
     let text t = t.text
     let fontfamily t = t.fontfamily |? "sans-serif"
@@ -63,7 +63,7 @@ module Object = struct
       | `Polyline of (float * float) list
       | `Text of Text.t
       | `Tile of Gid.t ]
-    [@@deriving eq, ord, show]
+    [@@deriving eq, ord, show { with_path = false }]
   end
 
   type shape = Shape.t
@@ -81,7 +81,7 @@ module Object = struct
       template : string option;
       properties : Property.t list;
       shape : Shape.t option }
-  [@@deriving eq, ord, show, make]
+  [@@deriving eq, ord, show { with_path = false }, make]
 
   let id t = t.id |? 0
   let name t = t.name
@@ -124,7 +124,7 @@ end
 module Layer = struct
   module Tilelayer = struct
     type t = {width : int; height : int; data : Data.t option}
-    [@@deriving eq, ord, show, make]
+    [@@deriving eq, ord, show { with_path = false }, make]
 
     let width t = t.width
     let height t = t.height
@@ -135,13 +135,13 @@ module Layer = struct
 
   module Objectgroup = struct
     module Draworder = struct
-      type t = [`Topdown | `Index] [@@deriving eq, ord, show]
+      type t = [`Topdown | `Index] [@@deriving eq, ord, show { with_path = false }]
     end
 
     type draworder = Draworder.t
 
     type t = {draworder : Draworder.t option; objects : Object.t list}
-    [@@deriving eq, ord, show, make]
+    [@@deriving eq, ord, show { with_path = false }, make]
 
     let draworder t = t.draworder |? `Topdown
     let objects t = t.objects
@@ -158,7 +158,7 @@ module Layer = struct
   module Imagelayer = struct
     type t =
       {image : Image.t option; repeatx : bool option; repeaty : bool option}
-    [@@deriving eq, ord, show, make]
+    [@@deriving eq, ord, show { with_path = false }, make]
 
     let image t = t.image
     let repeatx t = t.repeatx |? false
@@ -185,7 +185,7 @@ module Layer = struct
           | `Objectgroup of Objectgroup.t
           | `Imagelayer of Imagelayer.t
           | `Group of t list ] }
-    [@@deriving eq, ord, show, make]
+    [@@deriving eq, ord, show { with_path = false }, make]
   end
 
   include Layer
@@ -196,7 +196,7 @@ module Layer = struct
       | `Objectgroup of Objectgroup.t
       | `Imagelayer of Imagelayer.t
       | `Group of Layer.t list ]
-    [@@deriving eq, ord, show]
+    [@@deriving eq, ord, show { with_path = false }]
   end
 
   type variant = Variant.t
@@ -235,7 +235,7 @@ end
 
 module Tile = struct
   module Frame = struct
-    type t = {tileid : int; duration : int} [@@deriving eq, ord, show, make]
+    type t = {tileid : int; duration : int} [@@deriving eq, ord, show { with_path = false }, make]
 
     let tileid t = t.tileid
     let duration t = t.duration
@@ -254,7 +254,7 @@ module Tile = struct
       image : Image.t option;
       objectgroup : Object.t list;
       animation : Frame.t list }
-  [@@deriving eq, ord, show, make]
+  [@@deriving eq, ord, show { with_path = false }, make]
 
   let id t = t.id
   let class_ t = t.class_
@@ -288,7 +288,7 @@ module Tileset = struct
   module Int_map = Stdlib.Map.Make (Int)
 
   module Tileoffset = struct
-    type t = {x : int option; y : int option} [@@deriving eq, ord, show, make]
+    type t = {x : int option; y : int option} [@@deriving eq, ord, show { with_path = false }, make]
 
     let x t = t.x |? 0
     let y t = t.y |? 0
@@ -304,7 +304,7 @@ module Tileset = struct
         spacing : int option;
         margin : int option;
         image : Image.t [@main] }
-    [@@deriving eq, ord, show, make]
+    [@@deriving eq, ord, show { with_path = false }, make]
 
     let tilecount t = t.tilecount
     let tilewidth t = t.tilewidth
@@ -328,31 +328,31 @@ module Tileset = struct
       | `Bottomleft
       | `Bottom
       | `Bottomright ]
-    [@@deriving eq, ord, show]
+    [@@deriving eq, ord, show { with_path = false }]
   end
 
   type objectalignment = Objectalignment.t
 
   module Tilerendersize = struct
-    type t = [`Tile | `Grid] [@@deriving eq, ord, show]
+    type t = [`Tile | `Grid] [@@deriving eq, ord, show { with_path = false }]
   end
 
   type tilerendersize = Tilerendersize.t
 
   module Fillmode = struct
-    type t = [`Stretch | `Preserve_aspect_fit] [@@deriving eq, ord, show]
+    type t = [`Stretch | `Preserve_aspect_fit] [@@deriving eq, ord, show { with_path = false }]
   end
 
   type fillmode = Fillmode.t
 
   module Grid = struct
-    type t = [`Orthogonal | `Isometric of int * int] [@@deriving eq, ord, show]
+    type t = [`Orthogonal | `Isometric of int * int] [@@deriving eq, ord, show { with_path = false }]
   end
 
   type grid = Grid.t
 
   module Variant = struct
-    type t = [`Single of Single.t | `Collection] [@@deriving eq, ord, show]
+    type t = [`Single of Single.t | `Collection] [@@deriving eq, ord, show { with_path = false }]
   end
 
   type variant = Variant.t
@@ -369,7 +369,7 @@ module Tileset = struct
       properties : Property.t list;
       tiles : Tile.t Int_map.t; [@opaque] [@main]
       variant : Variant.t }
-  [@@deriving eq, ord, show]
+  [@@deriving eq, ord, show { with_path = false }]
 
   let make ~name ?class_ ~columns ?objectalignment ?tilerendersize ?fillmode
       ?tileoffset ?grid ?(properties = []) ~variant tiles =
@@ -451,19 +451,19 @@ module Tileset = struct
 end
 
 module Map = struct
-  module Staggeraxis = struct type t = [`X | `Y] [@@deriving eq, ord, show] end
+  module Staggeraxis = struct type t = [`X | `Y] [@@deriving eq, ord, show { with_path = false }] end
 
   type staggeraxis = Staggeraxis.t
 
   module Staggerindex = struct
-    type t = [`Even | `Odd] [@@deriving eq, ord, show]
+    type t = [`Even | `Odd] [@@deriving eq, ord, show { with_path = false }]
   end
 
   type staggerindex = Staggerindex.t
 
   module Staggered = struct
     type t = {staggeraxis : Staggeraxis.t; staggerindex : Staggerindex.t}
-    [@@deriving eq, ord, show, make]
+    [@@deriving eq, ord, show { with_path = false }, make]
 
     let staggeraxis t = t.staggeraxis
     let staggerindex t = t.staggerindex
@@ -476,7 +476,7 @@ module Map = struct
       { hexsidelength : int;
         staggeraxis : Staggeraxis.t;
         staggerindex : Staggerindex.t }
-    [@@deriving eq, ord, show, make]
+    [@@deriving eq, ord, show { with_path = false }, make]
 
     let hexsidelength t = t.hexsidelength
     let staggeraxis t = t.staggeraxis
@@ -487,7 +487,7 @@ module Map = struct
 
   module Renderorder = struct
     type t = [`Right_down | `Right_up | `Left_down | `Left_up]
-    [@@deriving eq, ord, show]
+    [@@deriving eq, ord, show { with_path = false }]
   end
 
   type renderorder = Renderorder.t
@@ -498,7 +498,7 @@ module Map = struct
       | `Isometric
       | `Staggered of Staggered.t
       | `Hexagonal of Hexagonal.t ]
-    [@@deriving eq, ord, show]
+    [@@deriving eq, ord, show { with_path = false }]
   end
 
   type variant = Variant.t
@@ -521,7 +521,7 @@ module Map = struct
       tilesets : (int * string) list;
       layers : Layer.t list;
       variant : Variant.t }
-  [@@deriving eq, ord, show]
+  [@@deriving eq, ord, show { with_path = false }]
 
   let make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
       ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
@@ -597,7 +597,7 @@ end
 
 module Template = struct
   type t = {tileset : (int * string) option; object_ : Object.t}
-  [@@deriving eq, ord, show]
+  [@@deriving eq, ord, show { with_path = false }]
 
   let make ?tileset object_ =
     match Object.template object_ with
@@ -619,13 +619,13 @@ module Class = struct
       | `Tileset
       | `Wangcolor
       | `Wangset ]
-    [@@deriving eq, ord, show]
+    [@@deriving eq, ord, show { with_path = false }]
   end
 
   type useas = Useas.t
 
   type t = {useas : Useas.t list; members : Property.t list}
-  [@@deriving eq, ord, show]
+  [@@deriving eq, ord, show { with_path = false }]
 
   let make ~useas ~members =
     if useas = [] then Util.invalid_arg "useas" "[]" ;
@@ -638,14 +638,14 @@ end
 
 module Enum = struct
   module Storagetype = struct
-    type t = [`Int | `String] [@@deriving eq, ord, show]
+    type t = [`Int | `String] [@@deriving eq, ord, show { with_path = false }]
   end
 
   type storagetype = Storagetype.t
 
   type t =
     {storagetype : Storagetype.t; valuesasflags : bool; values : string array}
-  [@@deriving eq, ord, show]
+  [@@deriving eq, ord, show { with_path = false }]
 
   let make ~storagetype ~valuesasflags values =
     let values = Array.of_list values in
@@ -725,13 +725,13 @@ end
 
 module Customtype = struct
   module Variant = struct
-    type t = [`Class of Class.t | `Enum of Enum.t] [@@deriving eq, ord, show]
+    type t = [`Class of Class.t | `Enum of Enum.t] [@@deriving eq, ord, show { with_path = false }]
   end
 
   type variant = Variant.t
 
   type t = {id : int; name : string; variant : Variant.t}
-  [@@deriving eq, ord, show, make]
+  [@@deriving eq, ord, show { with_path = false }, make]
 
   let id t = t.id
   let name t = t.name
