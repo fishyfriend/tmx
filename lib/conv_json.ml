@@ -8,11 +8,11 @@ type json = Ezjsonm.value
 let wrap name f x =
   try f x with
   | Error.Error (`Json_parse (_, path, msg)) ->
-      Util.json_parse (name :: path) msg
-  | J.Parse_error (_, msg) -> Util.json_parse [name] msg
+      Util.Error.json_parse (name :: path) msg
+  | J.Parse_error (_, msg) -> Util.Error.json_parse [name] msg
   | exn ->
       let msg = Printexc.to_string exn in
-      Util.json_parse [name] ("parse error: " ^ msg)
+      Util.Error.json_parse [name] ("parse error: " ^ msg)
 
 let wrap_list f xs = List.mapi (fun i x -> wrap (string_of_int i) f x) xs
 
@@ -27,7 +27,7 @@ let rec property_value_of_json json =
   | `Float x -> `Float x
   | `Bool x -> `Bool x
   | `O dict -> `Class (List.map property_of_dict_item dict)
-  | _ -> Util.json_parse [] "string, number, boolean, or object expected"
+  | _ -> Util.Error.json_parse [] "string, number, boolean, or object expected"
 
 and property_of_dict_item (name, json) =
   wrap name
@@ -46,7 +46,7 @@ let property_type_of_json json =
   | "file" -> `File
   | "object" -> `Object
   | "class" -> `Class
-  | s -> Util.json_parse [] ("invalid type: " ^ s)
+  | s -> Util.Error.json_parse [] ("invalid type: " ^ s)
 
 let property_of_json json =
   let name = attr "name" json J.get_string in
@@ -82,7 +82,7 @@ let class_useas_of_json json =
   | "tileset" -> `Tileset
   | "wangcolor" -> `Wangcolor
   | "wangset" -> `Wangset
-  | s -> Util.json_parse [] ("invalid useas: " ^ s)
+  | s -> Util.Error.json_parse [] ("invalid useas: " ^ s)
 
 let class_of_json json =
   let json = lowercase_keys json in
@@ -98,7 +98,7 @@ let enum_storagetype_of_json json =
   match J.get_string json with
   | "int" -> `Int
   | "string" -> `String
-  | s -> Util.json_parse [] ("invalid storagetype " ^ s)
+  | s -> Util.Error.json_parse [] ("invalid storagetype " ^ s)
 
 let enum_of_json json =
   let json = lowercase_keys json in
@@ -111,7 +111,7 @@ let customtype_type_of_json json =
   match J.get_string json with
   | "class" -> `Class
   | "enum" -> `Enum
-  | s -> Util.json_parse [] ("invalid type " ^ s)
+  | s -> Util.Error.json_parse [] ("invalid type " ^ s)
 
 let customtype_of_json json =
   let json = lowercase_keys json in

@@ -63,7 +63,7 @@ let make_deep ~strict (type a) (get_property_lists : a -> Property0.t list list)
     let get_property_exn k t =
       match get_property k t with
       | Some p -> p
-      | None -> Util.not_found "property" k
+      | None -> Util.Error.not_found "property" k
   end )
 
 let make_shallow (get_properties : 'a -> Property0.t list) : 'a t =

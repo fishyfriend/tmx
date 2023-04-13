@@ -169,7 +169,7 @@ module Layer = struct
     let get_object_exn t id =
       match get_object t id with
       | Some o -> o
-      | None -> Util.object_not_found id
+      | None -> Util.Error.object_not_found id
     let set_objects t objects = {t with objects}
 
     let relocate t dir =
@@ -268,7 +268,9 @@ module Layer = struct
     | _ -> None
 
   let get_object_exn t id =
-    match get_object t id with Some o -> o | None -> Util.object_not_found id
+    match get_object t id with
+    | Some o -> o
+    | None -> Util.Error.object_not_found id
 
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
@@ -590,13 +592,13 @@ module Map = struct
       let cmp l l' = Int.compare (Layer.id l) (Layer.id l') in
       let layers' = List.sort_uniq cmp layers in
       if List.compare_lengths layers layers' = 0 then layers'
-      else Util.invalid_arg "layers" "id not unique" in
+      else Util.Error.invalid_arg "layers" "id not unique" in
     let tilesets =
       let tilesets' =
         let cmp (gid, _) (gid', _) = Int.compare gid gid' in
         List.sort_uniq cmp tilesets in
       if List.compare_lengths tilesets tilesets' = 0 then tilesets'
-      else Util.invalid_arg "tilesets" "firstgid not unique" in
+      else Util.Error.invalid_arg "tilesets" "firstgid not unique" in
     { version;
       tiledversion;
       class_;
@@ -638,7 +640,9 @@ module Map = struct
   let objects t = List.concat_map Layer.objects (layers t)
   let get_object t id = List.find_opt (fun o -> Object.id o = id) (objects t)
   let get_object_exn t id =
-    match get_object t id with Some o -> o | None -> Util.object_not_found id
+    match get_object t id with
+    | Some o -> o
+    | None -> Util.Error.object_not_found id
 
   let nextlayerid t =
     List.fold_left (fun id l -> max id (Layer.id l + 1)) 0 (layers t)
@@ -669,7 +673,7 @@ module Template = struct
 
   let make ?tileset object_ =
     match Object.template object_ with
-    | Some _ -> Util.nested_template ()
+    | Some _ -> Util.Error.nested_template ()
     | None -> {tileset; object_}
 
   let tileset t = t.tileset
@@ -702,7 +706,7 @@ module Class = struct
   [@@deriving eq, ord, show {with_path = false}]
 
   let make ~useas ~members =
-    if useas = [] then Util.invalid_arg "useas" "[]" ;
+    if useas = [] then Util.Error.invalid_arg "useas" "[]" ;
     let members = List.sort_uniq Property.compare members in
     {useas; members}
 

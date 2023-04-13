@@ -10,6 +10,7 @@ let make ~root : t =
   ( module struct
     module C = Context
     module S = State
+    module UE = Util.Error
 
     open S.Syntax
 
@@ -18,7 +19,7 @@ let make ~root : t =
     let wrap_error fname f x =
       try f x
       with Error.Error (`Xml_parse (None, path, msg)) ->
-        Util.xml_parse ~fname path msg
+        UE.xml_parse ~fname path msg
 
     let s_with_cwd dir s : _ S.t =
       let* c0 = S.get () in
@@ -33,12 +34,12 @@ let make ~root : t =
       let* c = S.get () in
       let fname_rel =
         if Filename.is_relative fname then Filename.concat (C.cwd c) fname
-        else Util.invalid_arg "filename" fname in
+        else UE.invalid_arg "filename" fname in
       let fname_abs = Filename.concat root fname_rel in
       if Sys.file_exists fname_abs then
         In_channel.with_open_text fname_abs @@ fun ic ->
         s_with_cwd (Filename.dirname fname_rel) (wrap_error fname_abs f ic)
-      else Util.file_not_found fname_abs
+      else UE.file_not_found fname_abs
 
     let s_relocate (type a) (module T : Sigs.RelocT with type t = a) (t : a) :
         _ S.t =
@@ -128,13 +129,12 @@ let make ~root : t =
     let load_customtypes_json_exn fn = run_context (s_load_customtypes_json fn)
     let load_file_exn fname = run_context (s_load_file fname)
 
-    let load_tileset_xml fname = Util.protect_result load_tileset_xml_exn fname
-    let load_map_xml fname = Util.protect_result load_map_xml_exn fname
-    let load_template_xml fname =
-      Util.protect_result load_template_xml_exn fname
+    let load_tileset_xml fname = UE.protect load_tileset_xml_exn fname
+    let load_map_xml fname = UE.protect load_map_xml_exn fname
+    let load_template_xml fname = UE.protect load_template_xml_exn fname
     let load_customtypes_json fname =
-      Util.protect_result load_customtypes_json_exn fname
-    let load_file fname = Util.protect_result load_file_exn fname
+      UE.protect load_customtypes_json_exn fname
+    let load_file fname = UE.protect load_file_exn fname
 
     let unload_tileset k = run_context (S.update (C.remove_tileset k))
     let unload_template k = run_context (S.update (C.remove_template k))

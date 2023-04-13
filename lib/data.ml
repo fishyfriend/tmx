@@ -1,11 +1,12 @@
 module Encoding = struct
-  type t = [`Base64 | `Csv] [@@deriving eq, ord, show { with_path = false }]
+  type t = [`Base64 | `Csv] [@@deriving eq, ord, show {with_path = false}]
 end
 
 type encoding = Encoding.t
 
 module Compression = struct
-  type t = [`Gzip | `Zlib | `Zstd] [@@deriving eq, ord, show { with_path = false }]
+  type t = [`Gzip | `Zlib | `Zstd]
+  [@@deriving eq, ord, show {with_path = false}]
 end
 
 type compression = Compression.t
@@ -14,7 +15,7 @@ type t =
   { encoding : Encoding.t option;
     compression : Compression.t option;
     bytes : bytes [@main] }
-[@@deriving eq, ord, show { with_path = false }, make]
+[@@deriving eq, ord, show {with_path = false}, make]
 
 let create ?encoding ?compression n =
   make ?encoding ?compression (Bytes.create n)
@@ -24,17 +25,19 @@ let compression t = t.compression
 let bytes t = t.bytes
 
 let read_base64 s =
-  try Base64.decode_exn s with Invalid_argument msg -> Util.base64 msg
+  try Base64.decode_exn s with Invalid_argument msg -> Util.Error.base64 msg
 
 let read_gzip s =
-  match Ezgzip.decompress s with Ok s -> s | Error (`Gzip e) -> Util.gzip e
+  match Ezgzip.decompress s with
+  | Ok s -> s
+  | Error (`Gzip e) -> Util.Error.gzip e
 
 let read_zlib s =
   match Ezgzip.Z.decompress ~header:true s with
   | Ok s -> s
-  | Error (`Zlib e) -> Util.zlib e
+  | Error (`Zlib e) -> Util.Error.zlib e
 
-let read_zstd _ = Util.zstd ()
+let read_zstd _ = Util.Error.zstd ()
 
 let read_csv s =
   let cells = String.split_on_char ',' s in
@@ -59,8 +62,8 @@ let of_string ?encoding ?compression s =
     | Some `Base64, Some `Zlib -> read_base64 s |> read_zlib
     | Some `Base64, Some `Zstd -> read_base64 s |> read_zstd
     | Some `Csv, None -> read_csv s
-    | Some `Csv, Some c -> Util.invalid_arg "compression" (Compression.show c)
-  in
+    | Some `Csv, Some c ->
+        Util.Error.invalid_arg "compression" (Compression.show c) in
   let bytes = Bytes.unsafe_of_string s in
   make ?encoding ?compression bytes
 

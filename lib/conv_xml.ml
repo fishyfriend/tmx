@@ -12,10 +12,10 @@ let data xml = X.data_to_string (nodes xml)
 let wrap name f x =
   try f x with
   | Error.Error (`Xml_parse (_, path, msg)) ->
-      Util.xml_parse (name :: path) msg
+      Util.Error.xml_parse (name :: path) msg
   | exn ->
       let msg = Printexc.to_string exn in
-      Util.xml_parse [name] ("parse error: " ^ msg)
+      Util.Error.xml_parse [name] ("parse error: " ^ msg)
 
 let wrap_list f xs = List.mapi (fun i x -> wrap (string_of_int i) f x) xs
 
@@ -33,7 +33,7 @@ let attr0 k xml = X.get_attr k (attrs xml)
 let attr k xml f = wrap ("@" ^ k) (fun xml -> attr0 k xml |> f) xml
 let attr' k xml = attr k xml Fun.id
 let attr_opt k xml f =
-  wrap ("@" ^ k) (fun xml -> Util.protect_opt (attr0 k) xml >|= f) xml
+  wrap ("@" ^ k) (fun xml -> Util.Option.protect (attr0 k) xml >|= f) xml
 let attr_opt' k xml = attr_opt k xml Fun.id
 
 let child0 k xml = X.member_with_attr k (nodes xml)
@@ -41,7 +41,7 @@ let child k xml f = wrap k (fun xml -> child0 k xml |> f) xml
 
 (* let child' k xml = child k xml Fun.id *)
 let child_opt k xml f =
-  wrap k (fun xml -> Util.protect_opt (child0 k) xml >|= f) xml
+  wrap k (fun xml -> Util.Option.protect (child0 k) xml >|= f) xml
 let child_opt' k xml = child_opt k xml Fun.id
 
 let children0 k xml = X.members_with_attr k (nodes xml)
@@ -52,7 +52,7 @@ let bool_of_string01 s =
   match s with
   | "0" -> false
   | "1" -> true
-  | _ -> Util.xml_parse [] "0 or 1 expected"
+  | _ -> Util.Error.xml_parse [] "0 or 1 expected"
 
 let property_type_of_string s =
   match s with
@@ -64,7 +64,7 @@ let property_type_of_string s =
   | "file" -> `File
   | "object" -> `Object
   | "class" -> `Class
-  | _ -> Util.xml_parse [] ("invalid type: " ^ s)
+  | _ -> Util.Error.xml_parse [] ("invalid type: " ^ s)
 
 let rec property_of_xml xml =
   let name = attr' "name" xml in
@@ -92,14 +92,14 @@ let halign_of_string s =
   | "center" -> `Center
   | "right" -> `Right
   | "justify" -> `Justify
-  | s -> Util.xml_parse [] ("invalid halign " ^ s)
+  | s -> Util.Error.xml_parse [] ("invalid halign " ^ s)
 
 let valign_of_string s =
   match s with
   | "top" -> `Top
   | "center" -> `Center
   | "bottom" -> `Bottom
-  | s -> Util.xml_parse [] ("invalid valign " ^ s)
+  | s -> Util.Error.xml_parse [] ("invalid valign " ^ s)
 
 let text_of_xml xml =
   let text = data xml in
@@ -137,7 +137,7 @@ let shape_of_xml xml =
   | None, None, None, Some points, None, None -> Some (`Polyline points)
   | None, None, None, None, Some text, None -> Some (`Text text)
   | None, None, None, None, None, Some gid -> Some (`Tile gid)
-  | _ -> Util.xml_parse [] "Ambiguous shape"
+  | _ -> Util.Error.xml_parse [] "Ambiguous shape"
 
 let object_of_xml xml =
   let id = attr_opt "id" xml int_of_string in
@@ -158,14 +158,14 @@ let encoding_of_string s =
   match s with
   | "base64" -> `Base64
   | "csv" -> `Csv
-  | _ -> Util.xml_parse [] "invalid encoding"
+  | _ -> Util.Error.xml_parse [] "invalid encoding"
 
 let compression_of_string s =
   match s with
   | "gzip" -> `Gzip
   | "zlib" -> `Zlib
   | "zstd" -> `Zstd
-  | _ -> Util.xml_parse [] "invalid compression"
+  | _ -> Util.Error.xml_parse [] "invalid compression"
 
 let data_of_xml0 ?encoding ?compression xml =
   match (encoding, compression) with
@@ -209,7 +209,7 @@ let image_format_of_string s =
   | "gif" -> `Gif
   | "jpg" -> `Jpg
   | "png" -> `Png
-  | _ -> Util.xml_parse [] "invalid format"
+  | _ -> Util.Error.xml_parse [] "invalid format"
 
 let image_of_xml xml =
   let trans = attr_opt "trans" xml Color.of_string in
@@ -258,19 +258,19 @@ let objectalignment_of_string s =
   | "bottomleft" -> `Bottomleft
   | "bottom" -> `Bottom
   | "bottomright" -> `Bottomright
-  | _ -> Util.xml_parse [] "invalid objectalignment"
+  | _ -> Util.Error.xml_parse [] "invalid objectalignment"
 
 let tilerendersize_of_string s =
   match s with
   | "tile" -> `Tile
   | "grid" -> `Grid
-  | _ -> Util.xml_parse [] "invalid tilerendersize"
+  | _ -> Util.Error.xml_parse [] "invalid tilerendersize"
 
 let fillmode_of_string s =
   match s with
   | "stretch" -> `Stretch
   | "preserve-aspect-fit" -> `Preserve_aspect_fit
-  | _ -> Util.xml_parse [] "fillmode"
+  | _ -> Util.Error.xml_parse [] "fillmode"
 
 let tileoffset_of_xml xml =
   let x = attr_opt "x" xml int_of_string in
@@ -284,7 +284,7 @@ let grid_of_xml xml =
       let width = attr "width" xml int_of_string in
       let height = attr "height" xml int_of_string in
       `Isometric (width, height)
-  | Some s -> Util.invalid_arg "orientation" s
+  | Some s -> Util.Error.invalid_arg "orientation" s
 
 let single_of_xml xml =
   let tilecount = attr "tilecount" xml int_of_string in
@@ -335,7 +335,7 @@ let draworder_of_string s =
   match s with
   | "index" -> `Index
   | "topdown" -> `Topdown
-  | _ -> Util.xml_parse [] s
+  | _ -> Util.Error.xml_parse [] s
 
 let objectgroup_of_xml xml =
   let draworder = attr_opt "draworder" xml draworder_of_string in
@@ -354,7 +354,7 @@ let layer_type_of_string s =
   | "objectgroup" -> `Objectgroup
   | "imagelayer" -> `Imagelayer
   | "group" -> `Group
-  | _ -> Util.xml_parse [] "invalid type"
+  | _ -> Util.Error.xml_parse [] "invalid type"
 
 let rec layer_of_xml ~type_ xml =
   let id = attr_opt "id" xml int_of_string in
@@ -381,7 +381,7 @@ and layers_of_xml xml =
   List.filter_map
     (function
       | `El (((_, name), attrs), nodes) ->
-          Util.protect_opt layer_type_of_string name >|= fun type_ ->
+          Util.Option.protect layer_type_of_string name >|= fun type_ ->
           layer_of_xml ~type_ (attrs, nodes)
       | `Data _ -> None )
     (nodes xml)
@@ -392,19 +392,19 @@ let renderorder_of_string s =
   | "right-up" -> `Right_up
   | "left-down" -> `Left_down
   | "left-up" -> `Left_up
-  | _ -> Util.xml_parse [] "invalid renderorder"
+  | _ -> Util.Error.xml_parse [] "invalid renderorder"
 
 let staggeraxis_of_string s =
   match s with
   | "x" -> `X
   | "y" -> `Y
-  | _ -> Util.xml_parse [] "invalid staggeraxis"
+  | _ -> Util.Error.xml_parse [] "invalid staggeraxis"
 
 let staggerindex_of_string s =
   match s with
   | "even" -> `Even
   | "odd" -> `Odd
-  | _ -> Util.xml_parse [] "staggerindex"
+  | _ -> Util.Error.xml_parse [] "staggerindex"
 
 let orientation_of_string s =
   match s with
@@ -412,7 +412,7 @@ let orientation_of_string s =
   | "isometric" -> `Isometric
   | "staggered" -> `Staggered
   | "hexagonal" -> `Hexagonal
-  | _ -> Util.xml_parse [] "invalid orientation"
+  | _ -> Util.Error.xml_parse [] "invalid orientation"
 
 let staggered_of_xml xml =
   let staggeraxis = attr "staggeraxis" xml staggeraxis_of_string in
@@ -437,7 +437,7 @@ let map_tileset_of_xml xml =
   match attr_opt' "source" xml with
   | Some source -> (firstgid, source)
   | None ->
-      Util.xml_parse []
+      Util.Error.xml_parse []
         "Missing attribute \"source\" (embedded tilesets are not supported)"
 
 let map_of_xml xml =

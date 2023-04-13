@@ -20,11 +20,11 @@ let sc1 ic = Scanf.bscanf ic "%1x%1x" @@ fun x y -> (x lsl 0x4) lor y
 
 let of_string_argb s =
   try Scanf.sscanf s "%_1[#]%r%r%r%r%!" sc1 sc1 sc1 sc1 argb
-  with _ -> Util.invalid_arg "color" s
+  with _ -> Util.Error.invalid_arg "color" s
 
 let of_string_rgb s =
   try Scanf.sscanf s "%_1[#]%r%r%r%!" sc1 sc1 sc1 rgb
-  with _ -> Util.invalid_arg "color" s
+  with _ -> Util.Error.invalid_arg "color" s
 
 let of_string s = try of_string_argb s with _ -> of_string_rgb s
 

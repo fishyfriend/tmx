@@ -102,13 +102,13 @@ let add_customtype_exn ct t =
                   | `Enum _ -> [`Property] in
                 let conjoint xs ys = List.exists (fun x -> List.mem x ys) xs in
                 conjoint (List.concat_map useas sibs) (useas ct) in
-              if has_conflict then Util.duplicate "customtype" name
+              if has_conflict then Util.Error.duplicate "customtype" name
               else Some (ct :: sibs) )
         t.customtypes }
 
 let add kind key value map =
   String_map.update key
-    (function Some _ -> Util.duplicate kind key | None -> Some value)
+    (function Some _ -> Util.Error.duplicate kind key | None -> Some value)
     map
 
 let add_template_exn k e t =
