@@ -24,3 +24,9 @@ module type StdT = sig
   include OrdT with type t := t
   include ShowT with type t := t
 end
+
+module type RelocT = sig
+  type t
+
+  val relocate : t -> string -> t
+end

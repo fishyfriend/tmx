@@ -50,6 +50,7 @@ end
 module type S = sig
   module Property : sig
     include Property0
+    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := t
   end
 
@@ -115,7 +116,7 @@ module type S = sig
 
     type shape = Shape.t
 
-    include StdT
+    type t
 
     val make :
       ?id:int ->
@@ -146,19 +147,23 @@ module type S = sig
 
     val set_shape : t -> shape option -> t
 
+    include StdT with type t := t
+    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
 
   module Layer : sig
-    include StdT
+    type t
 
     module Tilelayer : sig
-      include StdT
+      type t
 
       val make : width:int -> height:int -> ?data:Data.t -> unit -> t
       val width : t -> int
       val height : t -> int
       val data : t -> Data.t option
+
+      include StdT with type t := t
     end
 
     type tilelayer = Tilelayer.t
@@ -172,7 +177,7 @@ module type S = sig
 
       type draworder = Draworder.t
 
-      include StdT
+      type t
 
       val make : ?draworder:draworder -> ?objects:Object.t list -> unit -> t
       val draworder : t -> draworder
@@ -180,17 +185,23 @@ module type S = sig
       val get_object : t -> int -> Object.t option
       val get_object_exn : t -> int -> Object.t
       val set_objects : t -> Object.t list -> t
+
+      include StdT with type t := t
+      include RelocT with type t := t
     end
 
     type objectgroup = Objectgroup.t
 
     module Imagelayer : sig
-      include StdT
+      type t
 
       val make : ?image:Image.t -> ?repeatx:bool -> ?repeaty:bool -> unit -> t
       val image : t -> Image.t option
       val repeatx : t -> bool
       val repeaty : t -> bool
+
+      include StdT with type t := t
+      include RelocT with type t := t
     end
 
     type imagelayer = Imagelayer.t
@@ -203,6 +214,7 @@ module type S = sig
         | `Group of t list ]
 
       include StdT with type t := t
+      include RelocT with type t := t
     end
 
     type variant = Variant.t
@@ -239,21 +251,25 @@ module type S = sig
     val get_object : t -> int -> Object.t option
     val get_object_exn : t -> int -> Object.t
 
+    include StdT with type t := t
+    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
 
   module Tile : sig
     module Frame : sig
-      include StdT
+      type t
 
       val make : tileid:int -> duration:int -> t
       val tileid : t -> int
       val duration : t -> int
+
+      include StdT with type t := t
     end
 
     type frame = Frame.t
 
-    include StdT
+    type t
 
     val make :
       id:int ->
@@ -284,6 +300,8 @@ module type S = sig
     val set_width : t -> int option -> t
     val set_height : t -> int option -> t
 
+    include StdT with type t := t
+    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
 
@@ -299,7 +317,10 @@ module type S = sig
     type tileoffset = Tileoffset.t
 
     module Single : sig
-      include StdT
+      type t
+
+      include StdT with type t := t
+      include RelocT with type t := t
 
       val make :
         tilecount:int ->
@@ -366,11 +387,15 @@ module type S = sig
       type t = [`Single of Single.t | `Collection]
 
       include StdT with type t := t
+      include RelocT with type t := t
     end
 
     type variant = Variant.t
 
-    include StdT
+    type t
+
+    include StdT with type t := t
+    include RelocT with type t := t
 
     val make :
       name:string ->
@@ -465,7 +490,7 @@ module type S = sig
 
     type variant = Variant.t
 
-    include StdT
+    type t
 
     val make :
       version:string ->
@@ -511,19 +536,24 @@ module type S = sig
 
     val set_layers : t -> Layer.t list -> t
 
+    include StdT with type t := t
+    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
 
   module Template : sig
-    include StdT
+    type t
 
     val make : ?tileset:int * string -> Object.t -> t
     val tileset : t -> (int * string) option
     val object_ : t -> Object.t
+
+    include StdT with type t := t
+    include RelocT with type t := t
   end
 
   module Class : sig
-    include StdT
+    type t
 
     module Useas : sig
       type t =
@@ -544,6 +574,9 @@ module type S = sig
     val make : useas:Useas.t list -> members:Property.t list -> t
     val useas : t -> Useas.t list
     val members : t -> Property.t list
+
+    include StdT with type t := t
+    include RelocT with type t := t
   end
 
   module Enum : sig
@@ -555,7 +588,7 @@ module type S = sig
 
     type storagetype = Storagetype.t
 
-    include StdT
+    type t
 
     val make :
       storagetype:storagetype -> valuesasflags:bool -> string list -> t
@@ -570,6 +603,8 @@ module type S = sig
 
     val read_as_alist :
       t -> [> `String of string | `Int of int] -> (string * bool) list option
+
+    include StdT with type t := t
   end
 
   module Customtype : sig
@@ -577,16 +612,20 @@ module type S = sig
       type t = [`Class of Class.t | `Enum of Enum.t]
 
       include StdT with type t := t
+      include RelocT with type t := t
     end
 
     type variant = Variant.t
 
-    include StdT
+    type t
 
     val make : id:int -> name:string -> variant:variant -> t
     val id : t -> int
     val name : t -> string
     val variant : t -> Variant.t
+
+    include StdT with type t := t
+    include RelocT with type t := t
   end
 end
 

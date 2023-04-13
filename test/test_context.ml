@@ -22,7 +22,8 @@ let test_dup_ct =
   let tc_dup_ct_allow =
     Alcotest.test_case "Allow non-conflicting dups" `Quick @@ fun () ->
     let t =
-      C.empty |> add_class 1 [`Object; `Tile] |> add_class 2 [`Property] in
+      C.default |> add_class 1 [`Object; `Tile] |> add_class 2 [`Property]
+    in
     ignore @@ add_class 1 [`Property] t ;
     ignore @@ add_enum 1 t ;
     ignore @@ add_class 2 [`Object; `Tile] t in
@@ -30,7 +31,8 @@ let test_dup_ct =
   let tc_dup_ct_disallow =
     Alcotest.test_case "Disallow conflicting dups" `Quick @@ fun () ->
     let t =
-      C.empty |> add_class 1 [`Object; `Tile] |> add_class 2 [`Property] in
+      C.default |> add_class 1 [`Object; `Tile] |> add_class 2 [`Property]
+    in
     Alcotest.check_raises "raises" (dup_ct "1") (fun () ->
         ignore @@ add_class 1 [`Object] t ) ;
     Alcotest.check_raises "raises" (dup_ct "2") (fun () ->
@@ -59,7 +61,7 @@ let test_tile =
       ~tilesets:[(1, "ts1"); (5, "ts2")]
       ~layers ~variant:`Orthogonal () in
   let t =
-    C.empty
+    C.default
     |> C.add_tileset_exn "ts1" ts1
     |> C.add_tileset_exn "ts2" ts2
     |> C.add_map_exn "m" m in

@@ -1,3 +1,5 @@
 module type S = Sigs.Loader
 
-module Make () : S
+type t = (module S)
+
+val make : root:string -> t

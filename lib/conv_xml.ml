@@ -11,7 +11,8 @@ let data xml = X.data_to_string (nodes xml)
 
 let wrap name f x =
   try f x with
-  | Error.Error (`Xml_parse (path, msg)) -> Util.xml_parse (name :: path) msg
+  | Error.Error (`Xml_parse (_, path, msg)) ->
+      Util.xml_parse (name :: path) msg
   | exn ->
       let msg = Printexc.to_string exn in
       Util.xml_parse [name] ("parse error: " ^ msg)

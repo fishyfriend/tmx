@@ -1,8 +1,8 @@
 type t =
   [ `Invalid_arg of string * string
   | `Nested_template
-  | `Json_parse of string list * string
-  | `Xml_parse of string list * string
+  | `Json_parse of string option * string list * string
+  | `Xml_parse of string option * string list * string
   | `Base64 of string
   | `Gzip of string
   | `Zlib of string

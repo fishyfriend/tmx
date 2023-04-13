@@ -1,7 +1,14 @@
 open Util.Option.Infix
 
-module Make () = struct
-  let the_context = ref Context.empty
+module type S = sig
+  include module type of Basic
+
+  val run_context : ('a, Context.t) State.t -> 'a
+  val read_context : (Context.t -> 'a) -> 'a
+end
+
+module Make () : S = struct
+  let the_context = ref Context.default
 
   let run_context state =
     let result, context = State.run state !the_context in

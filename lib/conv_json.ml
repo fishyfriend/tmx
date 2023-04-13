@@ -7,7 +7,8 @@ type json = Ezjsonm.value
 
 let wrap name f x =
   try f x with
-  | Error.Error (`Json_parse (path, msg)) -> Util.json_parse (name :: path) msg
+  | Error.Error (`Json_parse (_, path, msg)) ->
+      Util.json_parse (name :: path) msg
   | J.Parse_error (_, msg) -> Util.json_parse [name] msg
   | exn ->
       let msg = Printexc.to_string exn in

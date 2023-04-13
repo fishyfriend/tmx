@@ -1,8 +1,8 @@
 type t =
   [ `Invalid_arg of string * string
   | `Nested_template
-  | `Json_parse of string list * string
-  | `Xml_parse of string list * string
+  | `Json_parse of string option * string list * string
+  | `Xml_parse of string option * string list * string
   | `Base64 of string
   | `Gzip of string
   | `Zlib of string
@@ -22,15 +22,19 @@ let show_path segs ~sep =
       | None -> if s = "" then seg else Format.sprintf "%s%c%s" s sep seg )
     "" segs
 
+let show_file_opt fname = Option.value fname ~default:"<unknown>"
+
 let show t =
   let open Format in
   match t with
   | `Invalid_arg (arg, msg) -> sprintf "Invalid %s argument: %s" arg msg
   | `Nested_template -> "Template's object may not have a template"
-  | `Json_parse (path, msg) ->
-      sprintf "JSON parse error at %s: %s" (show_path ~sep:'/' path) msg
-  | `Xml_parse (path, msg) ->
-      sprintf "XML parse error at %s: %s" (show_path ~sep:'.' path) msg
+  | `Json_parse (fname, path, msg) ->
+      sprintf "JSON parse error in file %s at %s: %s" (show_file_opt fname)
+        (show_path ~sep:'/' path) msg
+  | `Xml_parse (fname, path, msg) ->
+      sprintf "XML parse error in file %s at %s: %s" (show_file_opt fname)
+        (show_path ~sep:'.' path) msg
   | `Base64 msg -> sprintf "Base64 error: %s" msg
   | `Gzip msg -> sprintf "Gzip error: %s" msg
   | `Zlib msg -> sprintf "Zlib error: %s" msg

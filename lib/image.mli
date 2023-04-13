@@ -10,11 +10,15 @@ module Source : sig
   type t = [`File of string | `Embed of Format.t * Data.t]
 
   include Sigs0.StdT with type t := t
+  include Sigs0.RelocT with type t := t
 end
 
 type source = Source.t
 
-include Sigs0.StdT
+type t
+
+include Sigs0.StdT with type t := t
+include Sigs0.RelocT with type t := t
 
 val make :
   source:Source.t -> ?trans:Color.t -> ?width:int -> ?height:int -> unit -> t

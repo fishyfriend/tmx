@@ -6,19 +6,33 @@ module Property = struct
   let class_ t = match value t with `Class _ -> propertytype t | _ -> None
   let properties t = match value t with `Class props -> props | _ -> []
 
+  let rec relocate t dir =
+    let name = name t in
+    let propertytype = propertytype t in
+    let value =
+      match value t with
+      | `File fname -> `File (Filename.concat dir fname)
+      | `Class props ->
+          let props = List.map (Fun.flip relocate dir) props in
+          `Class props
+      | v -> v in
+    make ~name ?propertytype ~value ()
+
   include (val Props.make_shallow properties)
 end
 
 module Object = struct
   module Text = struct
     module Halign = struct
-      type t = [`Center | `Right | `Justify | `Left] [@@deriving eq, ord, show { with_path = false }]
+      type t = [`Center | `Right | `Justify | `Left]
+      [@@deriving eq, ord, show {with_path = false}]
     end
 
     type halign = Halign.t
 
     module Valign = struct
-      type t = [`Center | `Bottom | `Top] [@@deriving eq, ord, show { with_path = false }]
+      type t = [`Center | `Bottom | `Top]
+      [@@deriving eq, ord, show {with_path = false}]
     end
 
     type valign = Valign.t
@@ -36,7 +50,7 @@ module Object = struct
         kerning : bool option;
         halign : Halign.t option;
         valign : Valign.t option }
-    [@@deriving eq, ord, show { with_path = false }, make]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let text t = t.text
     let fontfamily t = t.fontfamily |? "sans-serif"
@@ -63,7 +77,7 @@ module Object = struct
       | `Polyline of (float * float) list
       | `Text of Text.t
       | `Tile of Gid.t ]
-    [@@deriving eq, ord, show { with_path = false }]
+    [@@deriving eq, ord, show {with_path = false}]
   end
 
   type shape = Shape.t
@@ -81,7 +95,7 @@ module Object = struct
       template : string option;
       properties : Property.t list;
       shape : Shape.t option }
-  [@@deriving eq, ord, show { with_path = false }, make]
+  [@@deriving eq, ord, show {with_path = false}, make]
 
   let id t = t.id |? 0
   let name t = t.name
@@ -118,13 +132,18 @@ module Object = struct
         abs_float (ymax -. ymin)
     | _ -> 0.
 
+  let relocate t dir =
+    { t with
+      template = t.template >|= Filename.concat dir;
+      properties = List.map (Fun.flip Property.relocate dir) t.properties }
+
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
 module Layer = struct
   module Tilelayer = struct
     type t = {width : int; height : int; data : Data.t option}
-    [@@deriving eq, ord, show { with_path = false }, make]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let width t = t.width
     let height t = t.height
@@ -135,13 +154,14 @@ module Layer = struct
 
   module Objectgroup = struct
     module Draworder = struct
-      type t = [`Topdown | `Index] [@@deriving eq, ord, show { with_path = false }]
+      type t = [`Topdown | `Index]
+      [@@deriving eq, ord, show {with_path = false}]
     end
 
     type draworder = Draworder.t
 
     type t = {draworder : Draworder.t option; objects : Object.t list}
-    [@@deriving eq, ord, show { with_path = false }, make]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let draworder t = t.draworder |? `Topdown
     let objects t = t.objects
@@ -151,6 +171,9 @@ module Layer = struct
       | Some o -> o
       | None -> Util.object_not_found id
     let set_objects t objects = {t with objects}
+
+    let relocate t dir =
+      {t with objects = List.map (Fun.flip Object.relocate dir) t.objects}
   end
 
   type objectgroup = Objectgroup.t
@@ -158,11 +181,14 @@ module Layer = struct
   module Imagelayer = struct
     type t =
       {image : Image.t option; repeatx : bool option; repeaty : bool option}
-    [@@deriving eq, ord, show { with_path = false }, make]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let image t = t.image
     let repeatx t = t.repeatx |? false
     let repeaty t = t.repeaty |? false
+
+    let relocate t dir =
+      {t with image = t.image >|= Fun.flip Image.relocate dir}
   end
 
   type imagelayer = Imagelayer.t
@@ -185,7 +211,19 @@ module Layer = struct
           | `Objectgroup of Objectgroup.t
           | `Imagelayer of Imagelayer.t
           | `Group of t list ] }
-    [@@deriving eq, ord, show { with_path = false }, make]
+    [@@deriving eq, ord, show {with_path = false}, make]
+
+    let rec relocate t dir =
+      { t with
+        properties = List.map (Fun.flip Property.relocate dir) t.properties;
+        variant = relocate_variant t.variant dir }
+
+    and relocate_variant v dir =
+      match v with
+      | `Tilelayer _ -> v
+      | `Objectgroup og -> `Objectgroup (Objectgroup.relocate og dir)
+      | `Imagelayer il -> `Imagelayer (Imagelayer.relocate il dir)
+      | `Group ts -> `Group (List.map (Fun.flip relocate dir) ts)
   end
 
   include Layer
@@ -196,7 +234,9 @@ module Layer = struct
       | `Objectgroup of Objectgroup.t
       | `Imagelayer of Imagelayer.t
       | `Group of Layer.t list ]
-    [@@deriving eq, ord, show { with_path = false }]
+    [@@deriving eq, ord, show {with_path = false}]
+
+    let relocate t dir = relocate_variant t dir
   end
 
   type variant = Variant.t
@@ -235,7 +275,8 @@ end
 
 module Tile = struct
   module Frame = struct
-    type t = {tileid : int; duration : int} [@@deriving eq, ord, show { with_path = false }, make]
+    type t = {tileid : int; duration : int}
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let tileid t = t.tileid
     let duration t = t.duration
@@ -254,7 +295,7 @@ module Tile = struct
       image : Image.t option;
       objectgroup : Object.t list;
       animation : Frame.t list }
-  [@@deriving eq, ord, show { with_path = false }, make]
+  [@@deriving eq, ord, show {with_path = false}, make]
 
   let id t = t.id
   let class_ t = t.class_
@@ -281,6 +322,12 @@ module Tile = struct
   let set_width t width = {t with width}
   let set_height t height = {t with height}
 
+  let relocate t dir =
+    { t with
+      properties = List.map (Fun.flip Property.relocate dir) t.properties;
+      image = t.image >|= Fun.flip Image.relocate dir;
+      objectgroup = List.map (Fun.flip Object.relocate dir) t.objectgroup }
+
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
@@ -288,7 +335,8 @@ module Tileset = struct
   module Int_map = Stdlib.Map.Make (Int)
 
   module Tileoffset = struct
-    type t = {x : int option; y : int option} [@@deriving eq, ord, show { with_path = false }, make]
+    type t = {x : int option; y : int option}
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let x t = t.x |? 0
     let y t = t.y |? 0
@@ -304,7 +352,7 @@ module Tileset = struct
         spacing : int option;
         margin : int option;
         image : Image.t [@main] }
-    [@@deriving eq, ord, show { with_path = false }, make]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let tilecount t = t.tilecount
     let tilewidth t = t.tilewidth
@@ -312,6 +360,7 @@ module Tileset = struct
     let spacing t = t.spacing |? 0
     let margin t = t.margin |? 0
     let image t = t.image
+    let relocate t dir = {t with image = Image.relocate t.image dir}
   end
 
   type single = Single.t
@@ -328,31 +377,37 @@ module Tileset = struct
       | `Bottomleft
       | `Bottom
       | `Bottomright ]
-    [@@deriving eq, ord, show { with_path = false }]
+    [@@deriving eq, ord, show {with_path = false}]
   end
 
   type objectalignment = Objectalignment.t
 
   module Tilerendersize = struct
-    type t = [`Tile | `Grid] [@@deriving eq, ord, show { with_path = false }]
+    type t = [`Tile | `Grid] [@@deriving eq, ord, show {with_path = false}]
   end
 
   type tilerendersize = Tilerendersize.t
 
   module Fillmode = struct
-    type t = [`Stretch | `Preserve_aspect_fit] [@@deriving eq, ord, show { with_path = false }]
+    type t = [`Stretch | `Preserve_aspect_fit]
+    [@@deriving eq, ord, show {with_path = false}]
   end
 
   type fillmode = Fillmode.t
 
   module Grid = struct
-    type t = [`Orthogonal | `Isometric of int * int] [@@deriving eq, ord, show { with_path = false }]
+    type t = [`Orthogonal | `Isometric of int * int]
+    [@@deriving eq, ord, show {with_path = false}]
   end
 
   type grid = Grid.t
 
   module Variant = struct
-    type t = [`Single of Single.t | `Collection] [@@deriving eq, ord, show { with_path = false }]
+    type t = [`Single of Single.t | `Collection]
+    [@@deriving eq, ord, show {with_path = false}]
+
+    let relocate t dir =
+      match t with `Single s -> `Single (Single.relocate s dir) | _ -> t
   end
 
   type variant = Variant.t
@@ -369,18 +424,14 @@ module Tileset = struct
       properties : Property.t list;
       tiles : Tile.t Int_map.t; [@opaque] [@main]
       variant : Variant.t }
-  [@@deriving eq, ord, show { with_path = false }]
+  [@@deriving eq, ord, show {with_path = false}]
 
   let make ~name ?class_ ~columns ?objectalignment ?tilerendersize ?fillmode
       ?tileoffset ?grid ?(properties = []) ~variant tiles =
-    let tile_map_of_list tiles =
+    let tiles =
       List.to_seq tiles
       |> Seq.map (fun tile -> (Tile.id tile, tile))
       |> Int_map.of_seq in
-    let tiles =
-      match variant with
-      | `Single _ -> tile_map_of_list tiles
-      | `Collection -> tile_map_of_list tiles in
     { name;
       class_;
       columns;
@@ -447,23 +498,31 @@ module Tileset = struct
           >|= Fun.flip Tile.set_width (Some width)
           >|= Fun.flip Tile.set_height (Some height)
 
+  let relocate t dir =
+    { t with
+      properties = List.map (Fun.flip Property.relocate dir) t.properties;
+      tiles = Int_map.map (Fun.flip Tile.relocate dir) t.tiles;
+      variant = Variant.relocate t.variant dir }
+
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
 module Map = struct
-  module Staggeraxis = struct type t = [`X | `Y] [@@deriving eq, ord, show { with_path = false }] end
+  module Staggeraxis = struct
+    type t = [`X | `Y] [@@deriving eq, ord, show {with_path = false}]
+  end
 
   type staggeraxis = Staggeraxis.t
 
   module Staggerindex = struct
-    type t = [`Even | `Odd] [@@deriving eq, ord, show { with_path = false }]
+    type t = [`Even | `Odd] [@@deriving eq, ord, show {with_path = false}]
   end
 
   type staggerindex = Staggerindex.t
 
   module Staggered = struct
     type t = {staggeraxis : Staggeraxis.t; staggerindex : Staggerindex.t}
-    [@@deriving eq, ord, show { with_path = false }, make]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let staggeraxis t = t.staggeraxis
     let staggerindex t = t.staggerindex
@@ -476,7 +535,7 @@ module Map = struct
       { hexsidelength : int;
         staggeraxis : Staggeraxis.t;
         staggerindex : Staggerindex.t }
-    [@@deriving eq, ord, show { with_path = false }, make]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let hexsidelength t = t.hexsidelength
     let staggeraxis t = t.staggeraxis
@@ -487,7 +546,7 @@ module Map = struct
 
   module Renderorder = struct
     type t = [`Right_down | `Right_up | `Left_down | `Left_up]
-    [@@deriving eq, ord, show { with_path = false }]
+    [@@deriving eq, ord, show {with_path = false}]
   end
 
   type renderorder = Renderorder.t
@@ -498,7 +557,7 @@ module Map = struct
       | `Isometric
       | `Staggered of Staggered.t
       | `Hexagonal of Hexagonal.t ]
-    [@@deriving eq, ord, show { with_path = false }]
+    [@@deriving eq, ord, show {with_path = false}]
   end
 
   type variant = Variant.t
@@ -521,7 +580,7 @@ module Map = struct
       tilesets : (int * string) list;
       layers : Layer.t list;
       variant : Variant.t }
-  [@@deriving eq, ord, show { with_path = false }]
+  [@@deriving eq, ord, show {with_path = false}]
 
   let make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
       ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
@@ -592,12 +651,21 @@ module Map = struct
           id (Layer.objects l) )
       0 (layers t)
 
+  let relocate t dir =
+    { t with
+      properties = List.map (Fun.flip Property.relocate dir) t.properties;
+      tilesets =
+        List.map
+          (fun (firstgid, fname) -> (firstgid, Filename.concat dir fname))
+          t.tilesets;
+      layers = List.map (Fun.flip Layer.relocate dir) t.layers }
+
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
 
 module Template = struct
   type t = {tileset : (int * string) option; object_ : Object.t}
-  [@@deriving eq, ord, show { with_path = false }]
+  [@@deriving eq, ord, show {with_path = false}]
 
   let make ?tileset object_ =
     match Object.template object_ with
@@ -606,6 +674,12 @@ module Template = struct
 
   let tileset t = t.tileset
   let object_ t = t.object_
+
+  let relocate t dir =
+    { tileset =
+        ( t.tileset >|= fun (firstgid, fname) ->
+          (firstgid, Filename.concat dir fname) );
+      object_ = Object.relocate t.object_ dir }
 end
 
 module Class = struct
@@ -619,13 +693,13 @@ module Class = struct
       | `Tileset
       | `Wangcolor
       | `Wangset ]
-    [@@deriving eq, ord, show { with_path = false }]
+    [@@deriving eq, ord, show {with_path = false}]
   end
 
   type useas = Useas.t
 
   type t = {useas : Useas.t list; members : Property.t list}
-  [@@deriving eq, ord, show { with_path = false }]
+  [@@deriving eq, ord, show {with_path = false}]
 
   let make ~useas ~members =
     if useas = [] then Util.invalid_arg "useas" "[]" ;
@@ -634,18 +708,21 @@ module Class = struct
 
   let useas t = t.useas
   let members t = t.members
+
+  let relocate t dir =
+    {t with members = List.map (Fun.flip Property.relocate dir) t.members}
 end
 
 module Enum = struct
   module Storagetype = struct
-    type t = [`Int | `String] [@@deriving eq, ord, show { with_path = false }]
+    type t = [`Int | `String] [@@deriving eq, ord, show {with_path = false}]
   end
 
   type storagetype = Storagetype.t
 
   type t =
     {storagetype : Storagetype.t; valuesasflags : bool; values : string array}
-  [@@deriving eq, ord, show { with_path = false }]
+  [@@deriving eq, ord, show {with_path = false}]
 
   let make ~storagetype ~valuesasflags values =
     let values = Array.of_list values in
@@ -725,15 +802,21 @@ end
 
 module Customtype = struct
   module Variant = struct
-    type t = [`Class of Class.t | `Enum of Enum.t] [@@deriving eq, ord, show { with_path = false }]
+    type t = [`Class of Class.t | `Enum of Enum.t]
+    [@@deriving eq, ord, show {with_path = false}]
+
+    let relocate t dir =
+      match t with `Class c -> `Class (Class.relocate c dir) | _ -> t
   end
 
   type variant = Variant.t
 
   type t = {id : int; name : string; variant : Variant.t}
-  [@@deriving eq, ord, show { with_path = false }, make]
+  [@@deriving eq, ord, show {with_path = false}, make]
 
   let id t = t.id
   let name t = t.name
   let variant t = t.variant
+
+  let relocate t dir = {t with variant = Variant.relocate t.variant dir}
 end
