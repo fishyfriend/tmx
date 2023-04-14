@@ -142,7 +142,7 @@ let shape_of_xml xml =
 let object_of_xml xml =
   let id = attr_opt "id" xml int_of_string in
   let name = attr_opt' "name" xml in
-  let class_ = attr_opt' "class" xml in
+  let class_ = attr_opt' "type" xml in
   let x = attr_opt "x" xml float_of_string in
   let y = attr_opt "y" xml float_of_string in
   let width = attr_opt "width" xml float_of_string in
@@ -232,7 +232,7 @@ let animation_of_xml xml =
 
 let tile_of_xml xml =
   let id = attr "id" xml int_of_string in
-  let class_ = attr_opt' "class" xml in
+  let class_ = attr_opt' "type" xml in
   let x = attr_opt "x" xml int_of_string in
   let y = attr_opt "y" xml int_of_string in
   let width = attr_opt "width" xml int_of_string in
