@@ -6,14 +6,14 @@ module Property = struct
   let class_ t = match value t with `Class _ -> propertytype t | _ -> None
   let properties t = match value t with `Class props -> props | _ -> []
 
-  let rec relocate t dir =
+  let rec relocate t ~from_dir ~to_dir =
     let name = name t in
     let propertytype = propertytype t in
     let value =
       match value t with
-      | `File fname -> `File (Filename.concat dir fname)
+      | `File fname -> `File (Util.Filename.relocate fname ~from_dir ~to_dir)
       | `Class props ->
-          let props = List.map (Fun.flip relocate dir) props in
+          let props = List.map (relocate ~from_dir ~to_dir) props in
           `Class props
       | v -> v in
     make ~name ?propertytype ~value ()
@@ -132,10 +132,12 @@ module Object = struct
         abs_float (ymax -. ymin)
     | _ -> 0.
 
-  let relocate t dir =
+  let relocate t ~from_dir ~to_dir =
     { t with
-      template = t.template >|= Filename.concat dir;
-      properties = List.map (Fun.flip Property.relocate dir) t.properties }
+      template =
+        Option.map (Util.Filename.relocate ~from_dir ~to_dir) t.template;
+      properties = List.map (Property.relocate ~from_dir ~to_dir) t.properties
+    }
 
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
@@ -172,8 +174,8 @@ module Layer = struct
       | None -> Util.Error.object_not_found id
     let set_objects t objects = {t with objects}
 
-    let relocate t dir =
-      {t with objects = List.map (Fun.flip Object.relocate dir) t.objects}
+    let relocate t ~from_dir ~to_dir =
+      {t with objects = List.map (Object.relocate ~from_dir ~to_dir) t.objects}
   end
 
   type objectgroup = Objectgroup.t
@@ -187,8 +189,8 @@ module Layer = struct
     let repeatx t = t.repeatx |? false
     let repeaty t = t.repeaty |? false
 
-    let relocate t dir =
-      {t with image = t.image >|= Fun.flip Image.relocate dir}
+    let relocate t ~from_dir ~to_dir =
+      {t with image = Option.map (Image.relocate ~from_dir ~to_dir) t.image}
   end
 
   type imagelayer = Imagelayer.t
@@ -213,17 +215,20 @@ module Layer = struct
           | `Group of t list ] }
     [@@deriving eq, ord, show {with_path = false}, make]
 
-    let rec relocate t dir =
+    let rec relocate t ~from_dir ~to_dir =
       { t with
-        properties = List.map (Fun.flip Property.relocate dir) t.properties;
-        variant = relocate_variant t.variant dir }
+        properties =
+          List.map (Property.relocate ~from_dir ~to_dir) t.properties;
+        variant = relocate_variant t.variant ~from_dir ~to_dir }
 
-    and relocate_variant v dir =
+    and relocate_variant v ~from_dir ~to_dir =
       match v with
       | `Tilelayer _ -> v
-      | `Objectgroup og -> `Objectgroup (Objectgroup.relocate og dir)
-      | `Imagelayer il -> `Imagelayer (Imagelayer.relocate il dir)
-      | `Group ts -> `Group (List.map (Fun.flip relocate dir) ts)
+      | `Objectgroup og ->
+          `Objectgroup (Objectgroup.relocate og ~from_dir ~to_dir)
+      | `Imagelayer il ->
+          `Imagelayer (Imagelayer.relocate il ~from_dir ~to_dir)
+      | `Group ts -> `Group (List.map (relocate ~from_dir ~to_dir) ts)
   end
 
   include Layer
@@ -236,7 +241,7 @@ module Layer = struct
       | `Group of Layer.t list ]
     [@@deriving eq, ord, show {with_path = false}]
 
-    let relocate t dir = relocate_variant t dir
+    let relocate t ~from_dir ~to_dir = relocate_variant t ~from_dir ~to_dir
   end
 
   type variant = Variant.t
@@ -324,11 +329,12 @@ module Tile = struct
   let set_width t width = {t with width}
   let set_height t height = {t with height}
 
-  let relocate t dir =
+  let relocate t ~from_dir ~to_dir =
     { t with
-      properties = List.map (Fun.flip Property.relocate dir) t.properties;
-      image = t.image >|= Fun.flip Image.relocate dir;
-      objectgroup = List.map (Fun.flip Object.relocate dir) t.objectgroup }
+      properties = List.map (Property.relocate ~from_dir ~to_dir) t.properties;
+      image = Option.map (Image.relocate ~from_dir ~to_dir) t.image;
+      objectgroup = List.map (Object.relocate ~from_dir ~to_dir) t.objectgroup
+    }
 
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
@@ -362,7 +368,8 @@ module Tileset = struct
     let spacing t = t.spacing |? 0
     let margin t = t.margin |? 0
     let image t = t.image
-    let relocate t dir = {t with image = Image.relocate t.image dir}
+    let relocate t ~from_dir ~to_dir =
+      {t with image = Image.relocate t.image ~from_dir ~to_dir}
   end
 
   type single = Single.t
@@ -408,8 +415,10 @@ module Tileset = struct
     type t = [`Single of Single.t | `Collection]
     [@@deriving eq, ord, show {with_path = false}]
 
-    let relocate t dir =
-      match t with `Single s -> `Single (Single.relocate s dir) | _ -> t
+    let relocate t ~from_dir ~to_dir =
+      match t with
+      | `Single s -> `Single (Single.relocate s ~from_dir ~to_dir)
+      | _ -> t
   end
 
   type variant = Variant.t
@@ -500,11 +509,11 @@ module Tileset = struct
           >|= Fun.flip Tile.set_width (Some width)
           >|= Fun.flip Tile.set_height (Some height)
 
-  let relocate t dir =
+  let relocate t ~from_dir ~to_dir =
     { t with
-      properties = List.map (Fun.flip Property.relocate dir) t.properties;
-      tiles = Int_map.map (Fun.flip Tile.relocate dir) t.tiles;
-      variant = Variant.relocate t.variant dir }
+      properties = List.map (Property.relocate ~from_dir ~to_dir) t.properties;
+      tiles = Int_map.map (Tile.relocate ~from_dir ~to_dir) t.tiles;
+      variant = Variant.relocate t.variant ~from_dir ~to_dir }
 
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
@@ -655,14 +664,15 @@ module Map = struct
           id (Layer.objects l) )
       0 (layers t)
 
-  let relocate t dir =
+  let relocate t ~from_dir ~to_dir =
     { t with
-      properties = List.map (Fun.flip Property.relocate dir) t.properties;
+      properties = List.map (Property.relocate ~from_dir ~to_dir) t.properties;
       tilesets =
         List.map
-          (fun (firstgid, fname) -> (firstgid, Filename.concat dir fname))
+          (fun (firstgid, fname) ->
+            (firstgid, Util.Filename.relocate fname ~from_dir ~to_dir) )
           t.tilesets;
-      layers = List.map (Fun.flip Layer.relocate dir) t.layers }
+      layers = List.map (Layer.relocate ~from_dir ~to_dir) t.layers }
 
   include ((val Props.make_shallow properties) : Props.S with type t := t)
 end
@@ -679,11 +689,13 @@ module Template = struct
   let tileset t = t.tileset
   let object_ t = t.object_
 
-  let relocate t dir =
+  let relocate t ~from_dir ~to_dir =
     { tileset =
-        ( t.tileset >|= fun (firstgid, fname) ->
-          (firstgid, Filename.concat dir fname) );
-      object_ = Object.relocate t.object_ dir }
+        Option.map
+          (fun (firstgid, fname) ->
+            (firstgid, Util.Filename.relocate fname ~from_dir ~to_dir) )
+          t.tileset;
+      object_ = Object.relocate t.object_ ~from_dir ~to_dir }
 end
 
 module Class = struct
@@ -713,8 +725,8 @@ module Class = struct
   let useas t = t.useas
   let members t = t.members
 
-  let relocate t dir =
-    {t with members = List.map (Fun.flip Property.relocate dir) t.members}
+  let relocate t ~from_dir ~to_dir =
+    {t with members = List.map (Property.relocate ~from_dir ~to_dir) t.members}
 end
 
 module Enum = struct
@@ -809,8 +821,10 @@ module Customtype = struct
     type t = [`Class of Class.t | `Enum of Enum.t]
     [@@deriving eq, ord, show {with_path = false}]
 
-    let relocate t dir =
-      match t with `Class c -> `Class (Class.relocate c dir) | _ -> t
+    let relocate t ~from_dir ~to_dir =
+      match t with
+      | `Class c -> `Class (Class.relocate c ~from_dir ~to_dir)
+      | _ -> t
   end
 
   type variant = Variant.t
@@ -822,5 +836,6 @@ module Customtype = struct
   let name t = t.name
   let variant t = t.variant
 
-  let relocate t dir = {t with variant = Variant.relocate t.variant dir}
+  let relocate t ~from_dir ~to_dir =
+    {t with variant = Variant.relocate t.variant ~from_dir ~to_dir}
 end

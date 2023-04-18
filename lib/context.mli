@@ -7,7 +7,6 @@ val templates : t -> (string * Basic.Template.t) list
 val customtypes : t -> Basic.Customtype.t list
 val maps : t -> (string * Basic.Map.t) list
 val files : t -> (string * string) list
-val cwd : t -> string
 
 val get_tileset : string -> t -> (int * Basic.Tileset.t) option
 val get_template : string -> t -> Basic.Template.t option
@@ -29,5 +28,3 @@ val remove_customtypes : string -> t -> t
 val remove_class : string -> useas:Basic.Class.useas -> t -> t
 val remove_file : string -> t -> t
 val remove_map : string -> t -> t
-
-val set_cwd : string -> t -> t

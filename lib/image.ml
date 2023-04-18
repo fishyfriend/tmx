@@ -9,8 +9,10 @@ module Source = struct
   type t = [`File of string | `Embed of Format.t * Data.t]
   [@@deriving eq, ord, show {with_path = false}]
 
-  let relocate t dir =
-    match t with `File fname -> `File (Filename.concat dir fname) | _ -> t
+  let relocate t ~from_dir ~to_dir =
+    match t with
+    | `File fname -> `File (Util.Filename.relocate ~from_dir ~to_dir fname)
+    | _ -> t
 end
 
 type source = Source.t
@@ -27,4 +29,5 @@ let trans t = t.trans
 let width t = t.width
 let height t = t.height
 
-let relocate t dir = {t with source = Source.relocate t.source dir}
+let relocate t ~from_dir ~to_dir =
+  {t with source = Source.relocate t.source ~from_dir ~to_dir}

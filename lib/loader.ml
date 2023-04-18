@@ -2,55 +2,40 @@
    this behavior configurable. *)
 (* TODO: tests for file path handling *)
 
+module C = Context
+module S = State
+module UE = Util.Error
+
 module type S = Sigs.Loader
 
 type t = (module S)
 
 let make ~root : t =
   ( module struct
-    module C = Context
-    module S = State
-    module UE = Util.Error
-
     open S.Syntax
 
     include Nonbasic.Make ()
+
+    let () =
+      if Filename.is_relative root then UE.invalid_arg "absolute path" root
 
     let wrap_error fname f x =
       try f x
       with Error.Error (`Xml_parse (None, path, msg)) ->
         UE.xml_parse ~fname path msg
 
-    let s_with_cwd dir s : _ S.t =
-      let* c0 = S.get () in
-      let dir0 = C.cwd c0 in
-      let c = C.set_cwd dir c0 in
-      let x, c' = S.run s c in
-      let c'' = C.set_cwd dir0 c' in
-      let* () = S.set c'' in
-      S.return x
-
-    let s_with_file fname (f : _ -> _ S.t) : _ S.t =
-      let* c = S.get () in
-      let fname_rel =
-        if Filename.is_relative fname then Filename.concat (C.cwd c) fname
-        else UE.invalid_arg "filename" fname in
-      let fname_abs = Filename.concat root fname_rel in
-      if Sys.file_exists fname_abs then
-        In_channel.with_open_text fname_abs @@ fun ic ->
-        s_with_cwd (Filename.dirname fname_rel) (wrap_error fname_abs f ic)
-      else UE.file_not_found fname_abs
-
-    let s_relocate (type a) (module T : Sigs.RelocT with type t = a) (t : a) :
-        _ S.t =
-      let+ c = S.get () in
-      T.relocate t (C.cwd c)
+    let with_file fname f =
+      if not (Filename.is_relative fname) then UE.invalid_arg "filename" fname ;
+      let fname = Filename.concat root fname in
+      if Sys.file_exists fname then
+        In_channel.with_open_text fname (wrap_error fname f)
+      else UE.file_not_found fname
 
     let rec s_load_tileset_xml fname : _ S.t =
-      s_with_file fname @@ fun ic ->
-      let* ts =
+      with_file fname @@ fun ic ->
+      let ts =
         Conv_xml.(with_xml_from_channel ic tileset_of_xml)
-        |> s_relocate (module Tileset) in
+        |> Tileset.relocate ~from_dir:(Filename.dirname fname) ~to_dir:"" in
       let* () =
         S.update (C.add_tileset_exn fname ts) >>= fun () ->
         S.iter_list s_load_for_property (Tileset.properties ts) >>= fun () ->
@@ -58,10 +43,11 @@ let make ~root : t =
       S.return ts
 
     and s_load_template_xml fname : _ S.t =
-      s_with_file fname @@ fun ic ->
-      let* tem =
+      with_file fname @@ fun ic ->
+      let tem =
         Conv_xml.(with_xml_from_channel ic template_of_xml)
-        |> s_relocate (module Template) in
+        |> Template.relocate ~from_dir:(Filename.dirname fname) ~to_dir:""
+      in
       let* () =
         S.update (C.add_template_exn fname tem) >>= fun () ->
         S.iter_option
@@ -71,10 +57,10 @@ let make ~root : t =
       S.return tem
 
     and s_load_map_xml fname : _ S.t =
-      s_with_file fname @@ fun ic ->
-      let* m =
+      with_file fname @@ fun ic ->
+      let m =
         Conv_xml.(with_xml_from_channel ic map_of_xml)
-        |> s_relocate (module Map) in
+        |> Map.relocate ~from_dir:(Filename.dirname fname) ~to_dir:"" in
       let* () =
         S.update (C.add_map_exn fname m) >>= fun () ->
         S.iter_list s_load_for_property (Map.properties m) >>= fun () ->
@@ -85,17 +71,19 @@ let make ~root : t =
       S.return m
 
     and s_load_customtypes_json fname : _ S.t =
-      s_with_file fname @@ fun ic ->
-      let* cts =
+      with_file fname @@ fun ic ->
+      let cts =
         Conv_json.(with_json_from_channel ic customtypes_of_json)
-        |> S.map_list (s_relocate (module Customtype)) in
+        |> List.map
+             (Customtype.relocate ~from_dir:(Filename.dirname fname) ~to_dir:"")
+      in
       let* () =
         S.iter_list (fun ct -> S.update (C.add_customtype_exn ct)) cts
         >>= fun () -> S.iter_list s_load_for_customtype cts in
       S.return cts
 
     and s_load_file fname : _ S.t =
-      s_with_file fname @@ fun ic ->
+      with_file fname @@ fun ic ->
       let data = In_channel.input_all ic in
       let+ () = S.update (C.add_file_exn fname data) in
       data

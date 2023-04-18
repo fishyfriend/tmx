@@ -28,5 +28,5 @@ end
 module type RelocT = sig
   type t
 
-  val relocate : t -> string -> t
+  val relocate : t -> from_dir:string -> to_dir:string -> t
 end
