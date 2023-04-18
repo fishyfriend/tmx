@@ -149,10 +149,11 @@ let object_of_xml xml =
   let height = attr_opt "height" xml float_of_string in
   let rotation = attr_opt "rotation" xml float_of_string in
   let visible = attr_opt "visible" xml bool_of_string01 in
+  let template = attr_opt' "template" xml in
   let properties = child_opt "properties" xml properties_of_xml in
   let shape = shape_of_xml xml in
   Object.make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible
-    ?properties ?shape ()
+    ?template ?properties ?shape ()
 
 let encoding_of_string s =
   match s with
@@ -456,8 +457,8 @@ let map_of_xml xml =
   let infinite = attr_opt "infinite" xml bool_of_string01 in
   let properties = child_opt "properties" xml properties_of_xml in
   let tilesets = children "tileset" xml map_tileset_of_xml in
-  let layers = child_opt "layers" xml layers_of_xml in
+  let layers = layers_of_xml xml in
   let variant = map_variant_of_xml xml in
   Map.make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
     ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
-    ?backgroundcolor ?infinite ?properties ~tilesets ?layers ~variant ()
+    ?backgroundcolor ?infinite ?properties ~tilesets ~layers ~variant ()

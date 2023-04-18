@@ -6,18 +6,16 @@
   test_data
   test_enum
   test_gid
-  test_map
-  test_property
-  test_tileset)
+  test_loader
+  test_property)
  (modules
   test_color
   test_context
   test_data
   test_enum
   test_gid
-  test_map
-  test_property
-  test_tileset)
+  test_loader
+  test_property)
  (deps
   (glob_files_rec data/*))
  (action

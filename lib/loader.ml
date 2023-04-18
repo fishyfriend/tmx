@@ -31,7 +31,13 @@ let make ~root : t =
         In_channel.with_open_text fname (wrap_error fname f)
       else UE.file_not_found fname
 
+    let s_with_cache f g =
+      let* c = S.get () in
+      match f c with Some x -> S.return x | None -> g ()
+
     let rec s_load_tileset_xml fname : _ S.t =
+      s_with_cache (fun c -> Option.map snd (C.get_tileset fname c))
+      @@ fun () ->
       with_file fname @@ fun ic ->
       let ts =
         Conv_xml.(with_xml_from_channel ic tileset_of_xml)
@@ -43,6 +49,7 @@ let make ~root : t =
       S.return ts
 
     and s_load_template_xml fname : _ S.t =
+      s_with_cache (C.get_template fname) @@ fun () ->
       with_file fname @@ fun ic ->
       let tem =
         Conv_xml.(with_xml_from_channel ic template_of_xml)
@@ -57,6 +64,7 @@ let make ~root : t =
       S.return tem
 
     and s_load_map_xml fname : _ S.t =
+      s_with_cache (C.get_map fname) @@ fun () ->
       with_file fname @@ fun ic ->
       let m =
         Conv_xml.(with_xml_from_channel ic map_of_xml)
@@ -83,6 +91,7 @@ let make ~root : t =
       S.return cts
 
     and s_load_file fname : _ S.t =
+      s_with_cache (C.get_file fname) @@ fun () ->
       with_file fname @@ fun ic ->
       let data = In_channel.input_all ic in
       let+ () = S.update (C.add_file_exn fname data) in

@@ -40,22 +40,14 @@ module Make () : S = struct
   module Object = struct
     include Basic.Object
 
-    let template_class t =
+    let template_object t =
       template t
       >>= (fun tem -> read_context (Context.get_template tem))
-      >|= Basic.Template.object_ >>= Basic.Object.class_
-
-    let template_properties t =
-      template t
-      >>= (fun tem -> read_context (Context.get_template tem))
-      >|= Basic.Template.object_ >|= properties |? []
+      >|= Basic.Template.object_
 
     let shape t =
       match shape t with
-      | `Rectangle ->
-          template t
-          >>= (fun tem -> read_context (Context.get_template tem))
-          >|= Basic.Template.object_ >|= shape |? `Rectangle
+      | `Rectangle -> template_object t >|= shape |? `Rectangle
       | sh -> sh
 
     let tile t =
@@ -65,18 +57,22 @@ module Make () : S = struct
 
     let tile_class t = tile t >>= Basic.Tile.class_
 
-    let tile_properties t = tile t >|= Basic.Tile.properties |? []
-
     let class_ t =
       match class_ t with
       | Some _ as c -> c
       | None ->
-        (match template_class t with Some _ as c -> c | None -> tile_class t)
+        ( match template_object t >>= class_ with
+        | Some _ as c -> c
+        | None -> tile_class t )
 
     let class_properties t =
       class_ t
       >>= (fun c -> read_context (Context.get_class ~useas:`Object c))
       >|= Basic.Class.members |? []
+
+    let template_properties t = template_object t >|= properties |? []
+
+    let tile_properties t = tile t >|= Basic.Tile.properties |? []
 
     let plists t =
       [ class_properties t; tile_properties t; template_properties t;
