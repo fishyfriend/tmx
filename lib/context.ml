@@ -1,8 +1,9 @@
-open Basic
+open Core_generic
 open Util.Option.Infix
 
 module String_map = Stdlib.Map.Make (String)
 
+(* Invariant : tilesets in decreasing order of firstgid *)
 type t =
   { tilesets : (int * string * Tileset.t) list;
     templates : Template.t String_map.t;
@@ -42,42 +43,22 @@ let get_class k t ~useas =
       | _ -> None )
     cts
 
-let map_get_tileset_for_gid m id =
-  let rec aux acc tss =
-    match tss with
-    | ((firstgid, _) as ts) :: tss when firstgid <= id -> aux (Some ts) tss
-    | _ -> acc in
-  aux None (Map.tilesets m)
-
-let map_get_tile m gid t =
+let get_tile gid t =
   let id = Gid.id gid in
-  map_get_tileset_for_gid m id >>= fun (firstgid, ts) ->
-  get_tileset ts t >>= fun (_, ts) -> Tileset.get_tile ts (id - firstgid)
-
-let map_memq_object m o =
-  match Map.get_object m (Object.id o) with
-  | Some o' when o == o' -> true
-  | _ -> false
-
-let object_get_map o t =
-  String_map.to_seq t.maps
-  |> Seq.find (fun (_, m) -> map_memq_object m o)
-  >|= snd
-
-let get_object_tile o gid t =
-  object_get_map o t >>= fun m -> map_get_tile m gid t
+  let pair =
+    List.find_map
+      (fun (firstgid, _, ts) ->
+        if firstgid <= id then Some (id - firstgid, ts) else None )
+      t.tilesets in
+  pair >>= fun (id, ts) -> Tileset.get_tile ts id
 
 let add_tileset_exn k ts t =
-  let rec last xs = List.(if length xs = 1 then hd xs else last (tl xs)) in
-  { t with
-    tilesets =
-      (let firstgid =
-         match t.tilesets with
-         | [] -> 1
-         | xs ->
-             let firstgid0, _, ts0 = last xs in
-             firstgid0 + Tileset.max_id ts0 in
-       t.tilesets @ [(firstgid, k, ts)] ) }
+  let firstgid =
+    match t.tilesets with
+    | [] -> 1
+    | (firstgid0, _, ts0) :: _ -> firstgid0 + Tileset.max_id ts0 + 1 in
+  let tilesets = (firstgid, k, ts) :: t.tilesets in
+  {t with tilesets}
 
 let add_customtype_exn ct t =
   let name = Customtype.name ct in
@@ -126,3 +107,14 @@ let remove_class k ~useas t =
         | _ -> true )
       cts in
   {t with customtypes = String_map.update k (Option.map filter) t.customtypes}
+
+let make_getters t : (module Sigs.Getters) =
+  ( module struct
+    let get_tileset k = get_tileset k !t |> Option.map snd
+    let get_template k = get_template k !t
+    let get_customtypes k = get_customtypes k !t
+    let get_file k = get_file k !t
+    let get_map k = get_map k !t
+    let get_class k ~useas = get_class k !t ~useas
+    let get_tile gid = get_tile gid !t
+  end )

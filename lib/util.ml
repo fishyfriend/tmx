@@ -5,6 +5,8 @@ module Option = struct
     let ( >>= ) o f = Option.bind o f
     let ( >|= ) o f = Option.map f o
     let ( |? ) o default = Option.value o ~default
+    let ( >>? ) o f = match o with Some _ -> o | None -> f ()
+    let ( >|? ) o f = match o with Some x -> x | None -> f ()
   end
 end
 
@@ -43,9 +45,9 @@ module Filename = struct
          []
     |> List.rev
 
-  let relocate ~from_dir ~to_dir path =
-    let path = Filename.concat from_dir path in
-    let xs, ys = (split path, split to_dir) in
+  let reloc ~from_ ~to_ path =
+    let path = Filename.concat from_ path in
+    let xs, ys = (split path, split to_) in
     let rec aux xs ys =
       match (xs, ys) with
       | x :: xs, y :: ys when x = y -> aux xs ys

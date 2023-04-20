@@ -1,6 +1,7 @@
 (* TODO: allow to fail gracefully when unable to autoload a resource file. make
    this behavior configurable. *)
 (* TODO: tests for file path handling *)
+(* TODO: gid remapping *)
 
 module C = Context
 module S = State
@@ -12,12 +13,22 @@ type t = (module S)
 
 let make ~root : t =
   ( module struct
-    open S.Syntax
-
-    include Nonbasic.Make ()
-
     let () =
       if Filename.is_relative root then UE.invalid_arg "absolute path" root
+
+    let the_context = ref Context.default
+
+    let run state =
+      let result, context = State.run state !the_context in
+      the_context := context ;
+      result
+
+    module Getters = (val Context.make_getters the_context)
+
+    include Getters
+    include Core.Make (Getters)
+
+    open S.Syntax
 
     let wrap_error fname f x =
       try f x
@@ -41,7 +52,7 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let ts =
         Conv_xml.(with_xml_from_channel ic tileset_of_xml)
-        |> Tileset.relocate ~from_dir:(Filename.dirname fname) ~to_dir:"" in
+        |> Tileset.reloc ~from_:(Filename.dirname fname) ~to_:"" in
       let* () =
         S.update (C.add_tileset_exn fname ts) >>= fun () ->
         S.iter_list s_load_for_property (Tileset.properties ts) >>= fun () ->
@@ -53,8 +64,7 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let tem =
         Conv_xml.(with_xml_from_channel ic template_of_xml)
-        |> Template.relocate ~from_dir:(Filename.dirname fname) ~to_dir:""
-      in
+        |> Template.reloc ~from_:(Filename.dirname fname) ~to_:"" in
       let* () =
         S.update (C.add_template_exn fname tem) >>= fun () ->
         S.iter_option
@@ -68,7 +78,7 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let m =
         Conv_xml.(with_xml_from_channel ic map_of_xml)
-        |> Map.relocate ~from_dir:(Filename.dirname fname) ~to_dir:"" in
+        |> Map.reloc ~from_:(Filename.dirname fname) ~to_:"" in
       let* () =
         S.update (C.add_map_exn fname m) >>= fun () ->
         S.iter_list s_load_for_property (Map.properties m) >>= fun () ->
@@ -82,8 +92,7 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let cts =
         Conv_json.(with_json_from_channel ic customtypes_of_json)
-        |> List.map
-             (Customtype.relocate ~from_dir:(Filename.dirname fname) ~to_dir:"")
+        |> List.map (Customtype.reloc ~from_:(Filename.dirname fname) ~to_:"")
       in
       let* () =
         S.iter_list (fun ct -> S.update (C.add_customtype_exn ct)) cts
@@ -120,11 +129,11 @@ let make ~root : t =
       | `Class c -> S.iter_list s_load_for_property (Class.members c)
       | _ -> S.return ()
 
-    let load_tileset_xml_exn fname = run_context (s_load_tileset_xml fname)
-    let load_map_xml_exn fname = run_context (s_load_map_xml fname)
-    let load_template_xml_exn fname = run_context (s_load_template_xml fname)
-    let load_customtypes_json_exn fn = run_context (s_load_customtypes_json fn)
-    let load_file_exn fname = run_context (s_load_file fname)
+    let load_tileset_xml_exn fname = run (s_load_tileset_xml fname)
+    let load_map_xml_exn fname = run (s_load_map_xml fname)
+    let load_template_xml_exn fname = run (s_load_template_xml fname)
+    let load_customtypes_json_exn fn = run (s_load_customtypes_json fn)
+    let load_file_exn fname = run (s_load_file fname)
 
     let load_tileset_xml fname = UE.protect load_tileset_xml_exn fname
     let load_map_xml fname = UE.protect load_map_xml_exn fname
@@ -133,18 +142,10 @@ let make ~root : t =
       UE.protect load_customtypes_json_exn fname
     let load_file fname = UE.protect load_file_exn fname
 
-    let unload_tileset k = run_context (S.update (C.remove_tileset k))
-    let unload_template k = run_context (S.update (C.remove_template k))
-    let unload_customtypes k = run_context (S.update (C.remove_customtypes k))
-    let unload_class k ~useas =
-      run_context (S.update (C.remove_class k ~useas))
-    let unload_file k = run_context (S.update (C.remove_file k))
-    let unload_map k = run_context (S.update (C.remove_map k))
-
-    let get_tileset k = read_context (C.get_tileset k) |> Option.map snd
-    let get_template k = read_context (C.get_template k)
-    let get_customtypes k = read_context (C.get_customtypes k)
-    let get_class k ~useas = read_context (C.get_class k ~useas)
-    let get_file k = read_context (C.get_file k)
-    let get_map k = read_context (C.get_map k)
+    let unload_tileset k = run (S.update (C.remove_tileset k))
+    let unload_template k = run (S.update (C.remove_template k))
+    let unload_customtypes k = run (S.update (C.remove_customtypes k))
+    let unload_class k ~useas = run (S.update (C.remove_class k ~useas))
+    let unload_file k = run (S.update (C.remove_file k))
+    let unload_map k = run (S.update (C.remove_map k))
   end )

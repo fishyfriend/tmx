@@ -1,32 +1,26 @@
-module type EqT = sig
+module type T = sig
   type t
+end
 
-  val equal : t -> t -> bool
+module type EqT = sig
+  include T val equal : t -> t -> bool
 end
 
 module type OrdT = sig
-  type t
-
-  val compare : t -> t -> int
+  include T val compare : t -> t -> int
 end
 
 module type ShowT = sig
-  type t
-
-  val show : t -> string
-  val pp : Format.formatter -> t -> unit
+  include T val show : t -> string val pp : Format.formatter -> t -> unit
 end
 
 module type StdT = sig
-  type t
-
+  include T
   include EqT with type t := t
   include OrdT with type t := t
   include ShowT with type t := t
 end
 
 module type RelocT = sig
-  type t
-
-  val relocate : t -> from_dir:string -> to_dir:string -> t
+  include T val reloc : t -> from_:string -> to_:string -> t
 end

@@ -5,21 +5,22 @@
  (preprocess
   (pps ppx_deriving.eq ppx_deriving.make ppx_deriving.ord ppx_deriving.show))
  (modules
-  basic
   color
   context
   conv_json
   conv_xml
+  core
+  core_generic
   data
+  enum
   error
   gid
   image
   loader
-  nonbasic
-  property0
   props
   sigs
   sigs0
   state
   tmx
+  types
   util))

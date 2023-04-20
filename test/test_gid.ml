@@ -1,4 +1,4 @@
-open Tmx
+open Tmx__
 
 let check_consistent flags id =
   let t = Gid.make ~flags id in

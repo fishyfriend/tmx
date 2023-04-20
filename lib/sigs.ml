@@ -1,5 +1,15 @@
 include Sigs0
 
+module type Getters = sig
+  val get_tileset : string -> Types.tileset option
+  val get_template : string -> Types.template option
+  val get_customtypes : string -> Types.customtype list
+  val get_class : string -> useas:Types.useas -> Types.class_ option
+  val get_map : string -> Types.map option
+  val get_file : string -> string option
+  val get_tile : Gid.t -> Types.tile option
+end
+
 module type ClassT = sig
   type t
 
@@ -22,37 +32,60 @@ module type ClassPropsT = sig
   include PropsT with type t := t
 end
 
-module type Property0 = sig
-  include StdT
+module type Core = sig
+  module Error : module type of Error
 
-  module Value : sig
-    type nonrec t =
-      [ `String of string
-      | `Int of int
-      | `Float of float
-      | `Bool of bool
-      | `Color of Color.t
-      | `File of string
-      | `Object of int
-      | `Class of t list ]
+  type error = Error.t
+
+  module Color : module type of Color
+
+  type color = Color.t
+
+  module Gid : module type of Gid
+
+  type gid = Gid.t
+
+  module Data : module type of Data
+
+  type data = Data.t
+
+  module Image : module type of Image
+
+  type image = Image.t
+
+  module Property : sig
+    type t
+
+    module Value : sig
+      type property := t
+
+      type t =
+        [ `String of string
+        | `Int of int
+        | `Float of float
+        | `Bool of bool
+        | `Color of Color.t
+        | `File of string
+        | `Object of int
+        | `Class of property list ]
+
+      include StdT with type t := t
+    end
+
+    type value = Value.t
+
+    val make :
+      name:string -> ?propertytype:string -> value:Value.t -> unit -> t
+    val name : t -> string
+    val propertytype : t -> string option
+    val value : t -> Value.t
 
     include StdT with type t := t
-  end
-
-  type value = Value.t
-
-  val make : name:string -> ?propertytype:string -> value:Value.t -> unit -> t
-  val name : t -> string
-  val propertytype : t -> string option
-  val value : t -> Value.t
-end
-
-module type S = sig
-  module Property : sig
-    include Property0
     include RelocT with type t := t
     include ClassPropsT with type t := t and type property := t
   end
+
+  type property = Property.t
 
   module Object : sig
     module Text : sig
@@ -68,7 +101,7 @@ module type S = sig
 
       type valign = Valign.t
 
-      include StdT
+      type t
 
       val make :
         ?fontfamily:string ->
@@ -97,6 +130,8 @@ module type S = sig
       val kerning : t -> bool
       val halign : t -> halign
       val valign : t -> valign
+
+      include StdT with type t := t
     end
 
     type text = Text.t
@@ -145,12 +180,12 @@ module type S = sig
     val width : t -> float
     val height : t -> float
 
-    val set_shape : t -> shape option -> t
-
     include StdT with type t := t
     include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
+
+  type object_ = Object.t
 
   module Layer : sig
     type t
@@ -184,7 +219,6 @@ module type S = sig
       val objects : t -> Object.t list
       val get_object : t -> int -> Object.t option
       val get_object_exn : t -> int -> Object.t
-      val set_objects : t -> Object.t list -> t
 
       include StdT with type t := t
       include RelocT with type t := t
@@ -207,11 +241,13 @@ module type S = sig
     type imagelayer = Imagelayer.t
 
     module Variant : sig
-      type nonrec t =
+      type layer := t
+
+      type t =
         [ `Tilelayer of Tilelayer.t
         | `Objectgroup of Objectgroup.t
         | `Imagelayer of Imagelayer.t
-        | `Group of t list ]
+        | `Group of layer list ]
 
       include StdT with type t := t
       include RelocT with type t := t
@@ -245,7 +281,6 @@ module type S = sig
     val parallaxx : t -> float
     val parallaxy : t -> float
     val variant : t -> variant
-    val set_variant : t -> variant -> t
 
     val objects : t -> Object.t list
     val get_object : t -> int -> Object.t option
@@ -255,6 +290,8 @@ module type S = sig
     include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
+
+  type layer = Layer.t
 
   module Tile : sig
     module Frame : sig
@@ -294,16 +331,12 @@ module type S = sig
     val objectgroup : t -> Object.t list
     val animation : t -> Frame.t list
 
-    val set_image : t -> Image.t option -> t
-    val set_x : t -> int option -> t
-    val set_y : t -> int option -> t
-    val set_width : t -> int option -> t
-    val set_height : t -> int option -> t
-
     include StdT with type t := t
     include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
+
+  type tile = Tile.t
 
   module Tileset : sig
     module Tileoffset : sig
@@ -427,6 +460,8 @@ module type S = sig
     include ClassPropsT with type t := t and type property := Property.t
   end
 
+  type tileset = Tileset.t
+
   module Map : sig
     module Staggeraxis : sig
       type t = [`X | `Y]
@@ -534,12 +569,12 @@ module type S = sig
     val nextlayerid : t -> int
     val nextobjectid : t -> int
 
-    val set_layers : t -> Layer.t list -> t
-
     include StdT with type t := t
     include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
+
+  type map = Map.t
 
   module Template : sig
     type t
@@ -551,6 +586,8 @@ module type S = sig
     include StdT with type t := t
     include RelocT with type t := t
   end
+
+  type template = Template.t
 
   module Class : sig
     type t
@@ -579,33 +616,11 @@ module type S = sig
     include RelocT with type t := t
   end
 
-  module Enum : sig
-    module Storagetype : sig
-      type t = [`Int | `String]
+  type class_ = Class.t
 
-      include StdT with type t := t
-    end
+  module Enum : module type of Enum
 
-    type storagetype = Storagetype.t
-
-    type t
-
-    val make :
-      storagetype:storagetype -> valuesasflags:bool -> string list -> t
-    val storagetype : t -> Storagetype.t
-    val valuesasflags : t -> bool
-    val values : t -> string list
-
-    val read_as_string :
-      t -> [> `String of string | `Int of int] -> string option
-
-    val read_as_int : t -> [> `String of string | `Int of int] -> int option
-
-    val read_as_alist :
-      t -> [> `String of string | `Int of int] -> (string * bool) list option
-
-    include StdT with type t := t
-  end
+  type enum = Enum.t
 
   module Customtype : sig
     module Variant : sig
@@ -627,10 +642,41 @@ module type S = sig
     include StdT with type t := t
     include RelocT with type t := t
   end
+
+  type customtype = Customtype.t
 end
 
+module type Core_generic =
+  Core
+    with type Property.t = Types.property
+     and type Object.Text.t = Types.text
+     and type Object.t = Types.object_
+     and type Layer.Tilelayer.t = Types.tilelayer
+     and type Layer.Objectgroup.t = Types.objectgroup
+     and type Layer.Imagelayer.t = Types.imagelayer
+     and type Layer.t = Types.layer
+     and type Tile.Frame.t = Types.frame
+     and type Tile.t = Types.tile
+     and type Tileset.Tileoffset.t = Types.tileoffset
+     and type Tileset.Single.t = Types.single
+     and type Tileset.t = Types.tileset
+     and type Map.Staggered.t = Types.staggered
+     and type Map.Hexagonal.t = Types.hexagonal
+     and type Map.t = Types.map
+     and type Template.t = Types.template
+     and type Class.t = Types.class_
+     and type Customtype.t = Types.customtype
+
 module type Loader = sig
-  include S
+  include Core
+
+  val get_tileset : string -> Tileset.t option
+  val get_template : string -> Template.t option
+  val get_customtypes : string -> Customtype.t list
+  val get_class : string -> useas:Class.useas -> Class.t option
+  val get_map : string -> Map.t option
+  val get_file : string -> string option
+  val get_tile : Gid.t -> Tile.t option
 
   val load_tileset_xml : string -> (Tileset.t, Error.t) result
   val load_template_xml : string -> (Template.t, Error.t) result
@@ -650,11 +696,4 @@ module type Loader = sig
   val unload_class : string -> useas:Class.useas -> unit
   val unload_file : string -> unit
   val unload_map : string -> unit
-
-  val get_tileset : string -> Tileset.t option
-  val get_template : string -> Template.t option
-  val get_customtypes : string -> Customtype.t list
-  val get_class : string -> useas:Class.useas -> Class.t option
-  val get_map : string -> Map.t option
-  val get_file : string -> string option
 end

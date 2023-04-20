@@ -1,5 +1,10 @@
 open Tmx__
-open Nonbasic.Make ()
+
+let the_context = ref Context.default
+
+module Getters = (val Context.make_getters the_context)
+
+open Core.Make (Getters)
 
 module P = Property
 
@@ -7,7 +12,7 @@ let prop name value = P.make ~name ~value ()
 let prop' name pt value = P.make ~name ~propertytype:pt ~value ()
 
 let class_ name members : Customtype.t =
-  let variant = `Class (Class.make ~useas:[`Layer; `Property] ~members) in
+  let variant = `Class (Class.make ~useas:[`Property] ~members) in
   Customtype.make ~id:1 ~name ~variant
 
 let customtypes =
@@ -25,8 +30,8 @@ let customtypes =
               prop "c2p3" (`Class [prop "c1p3" (`Float 543.)]) ] ) ] ]
 
 let () =
-  let load ct = State.update (Context.add_customtype_exn ct) in
-  run_context (State.iter_list load customtypes)
+  the_context :=
+    List.fold_right Context.add_customtype_exn customtypes !the_context
 
 let check_subprop t k v =
   let t' = P.get_property k t in

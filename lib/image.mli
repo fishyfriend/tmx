@@ -17,9 +17,6 @@ type source = Source.t
 
 type t
 
-include Sigs0.StdT with type t := t
-include Sigs0.RelocT with type t := t
-
 val make :
   source:Source.t -> ?trans:Color.t -> ?width:int -> ?height:int -> unit -> t
 
@@ -27,3 +24,6 @@ val source : t -> Source.t
 val trans : t -> Color.t option
 val width : t -> int option
 val height : t -> int option
+
+include Sigs0.StdT with type t := t
+include Sigs0.RelocT with type t := t

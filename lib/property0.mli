@@ -1,1 +1,0 @@
-include Sigs.Property0
