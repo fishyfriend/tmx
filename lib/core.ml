@@ -1,3 +1,5 @@
+(* TODO: move auxiliary functions like reloc & map_gids to an [Aux] module *)
+
 module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
   open Util.Option.Infix
   open Types
@@ -143,6 +145,8 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         | `Text of Text.t
         | `Tile of Gid.t ]
       [@@deriving eq, ord, show {with_path = false}]
+
+      let map_gids f t = match t with `Tile gid -> `Tile (f gid) | _ -> t
     end
 
     type shape = Shape.t
@@ -215,6 +219,8 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       let template = t.template >|= Util.Filename.reloc ~from_ ~to_ in
       let properties = List.map (Property.reloc ~from_ ~to_) t.properties in
       {t with template; properties}
+
+    let map_gids f t = {t with shape = t.shape >|= Shape.map_gids f}
   end
 
   type object_ = Object.t
@@ -228,6 +234,35 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       let width t = t.width
       let height t = t.height
       let data t = t.data
+
+      let gid_at ~col ~row t =
+        (* TODO: make data non-optional. this will disallow empty tile
+           layers *)
+        if col >= width t then Util.Error.invalid_arg "col" (string_of_int col) ;
+        if row >= height t then
+          Util.Error.invalid_arg "row" (string_of_int row) ;
+        let i = col + (row * width t) in
+        data t |> Option.get |> Data.bytes
+        |> Fun.flip Bytes.get_int32_ne (i * 4)
+        |> Gid.of_int32
+
+      let map_gids f t =
+        (* TODO: It would be better to modify the data in place; we should
+           avoid allocate a whole new map in case the map is huge. *)
+        match t.data with
+        | None -> t
+        | Some data0 ->
+            let bytes0 = Data.bytes data0 in
+            let bytes = Bytes.copy bytes0 in
+            for i = 0 to (Bytes.length bytes / 4) - 1 do
+              let gid0 = Gid.of_int32 (Bytes.get_int32_ne bytes (i * 4)) in
+              let gid = f gid0 in
+              Bytes.set_int32_ne bytes (i * 4) (Gid.to_int32 gid)
+            done ;
+            let encoding = Data.encoding data0 in
+            let compression = Data.compression data0 in
+            let data = Some (Data.make ?encoding ?compression bytes) in
+            {t with data}
     end
 
     type tilelayer = Tilelayer.t
@@ -257,6 +292,9 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       let reloc t ~from_ ~to_ =
         let objects = List.map (Object.reloc ~from_ ~to_) t.objects in
         {t with objects}
+
+      let map_gids f t =
+        {t with objects = List.map (Object.map_gids f) t.objects}
     end
 
     type objectgroup = Objectgroup.t
@@ -315,10 +353,20 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       | `Imagelayer il -> `Imagelayer (Imagelayer.reloc il ~from_ ~to_)
       | `Group ts -> `Group (List.map (reloc ~from_ ~to_) ts)
 
+    let rec map_gids f t = {t with variant = map_gids_variant f t.variant}
+
+    and map_gids_variant f t =
+      match t with
+      | `Tilelayer tl -> `Tilelayer (Tilelayer.map_gids f tl)
+      | `Objectgroup og -> `Objectgroup (Objectgroup.map_gids f og)
+      | `Group ls -> `Group (List.map (map_gids f) ls)
+      | _ -> t
+
     module Variant = struct
       type t = variant [@@deriving eq, ord, show {with_path = false}]
 
       let reloc t ~from_ ~to_ = reloc_variant t ~from_ ~to_
+      let map_gids f t = map_gids_variant f t
     end
 
     let id t = t.id |? 0
@@ -628,7 +676,7 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     type renderorder = Renderorder.t
 
-    module Variant = struct
+    module Geometry = struct
       type t =
         [ `Orthogonal
         | `Isometric
@@ -637,8 +685,9 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       [@@deriving eq, ord, show {with_path = false}]
     end
 
-    type variant = Variant.t
+    type geometry = Geometry.t
 
+    (* Invariant : Tilesets in decreasing order of firstgid *)
     type t = Types.map =
       { version : string;
         tiledversion : string option;
@@ -656,13 +705,13 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         properties : Property.t list;
         tilesets : (int * string) list;
         layers : Layer.t list;
-        variant : Variant.t }
+        geometry : Geometry.t }
     [@@deriving eq, ord, show {with_path = false}]
 
     let make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel
         ~width ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
         ?backgroundcolor ?infinite ?(properties = []) ?(tilesets = [])
-        ?(layers = []) ~variant () =
+        ?(layers = []) ~geometry () =
       let layers =
         let cmp l l' = Int.compare (Layer.id l) (Layer.id l') in
         let layers' = List.sort_uniq cmp layers in
@@ -670,7 +719,7 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         else Util.Error.invalid_arg "layers" "id not unique" in
       let tilesets =
         let tilesets' =
-          let cmp (gid, _) (gid', _) = Int.compare gid gid' in
+          let cmp (gid, _) (gid', _) = -Int.compare gid gid' in
           List.sort_uniq cmp tilesets in
         if List.compare_lengths tilesets tilesets' = 0 then tilesets'
         else Util.Error.invalid_arg "tilesets" "firstgid not unique" in
@@ -690,7 +739,7 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         properties;
         tilesets;
         layers;
-        variant }
+        geometry }
 
     let version t = t.version
     let tiledversion t = t.tiledversion
@@ -708,12 +757,7 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
     let properties t = t.properties
     let tilesets t = t.tilesets
     let layers t = t.layers
-    let variant t = t.variant
-
-    let objects t = List.concat_map Layer.objects (layers t)
-    let get_object t id = List.find_opt (fun o -> Object.id o = id) (objects t)
-    let get_object_exn t id =
-      get_object t id >|? fun () -> Util.Error.object_not_found id
+    let geometry t = t.geometry
 
     let nextlayerid t =
       List.fold_left (fun id l -> max id (Layer.id l + 1)) 0 (layers t)
@@ -726,19 +770,36 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
             id (Layer.objects l) )
         0 (layers t)
 
+    let objects t = List.concat_map Layer.objects (layers t)
+    let get_object t id = List.find_opt (fun o -> Object.id o = id) (objects t)
+    let get_object_exn t id =
+      get_object t id >|? fun () -> Util.Error.object_not_found id
+
+    let get_tile_ref t gid =
+      let id = Gid.id gid in
+      List.find_map
+        (fun (firstgid, ts) ->
+          if firstgid <= id then Some (firstgid, ts, id - firstgid) else None
+          )
+        t.tilesets
+
     module P = (val make_std_props ~class_ ~properties ~useas:`Tile)
 
     include (P : Props.S with type t := t)
 
     let reloc t ~from_ ~to_ =
-      { t with
-        properties = List.map (Property.reloc ~from_ ~to_) t.properties;
-        tilesets =
-          List.map
-            (fun (firstgid, fname) ->
-              (firstgid, Util.Filename.reloc fname ~from_ ~to_) )
-            t.tilesets;
-        layers = List.map (Layer.reloc ~from_ ~to_) t.layers }
+      let properties = List.map (Property.reloc ~from_ ~to_) t.properties in
+      let tilesets =
+        List.map
+          (fun (firstgid, fname) ->
+            (firstgid, Util.Filename.reloc fname ~from_ ~to_) )
+          t.tilesets in
+      let layers = List.map (Layer.reloc ~from_ ~to_) t.layers in
+      {t with properties; tilesets; layers}
+
+    let map_gids f t =
+      let layers = List.map (Layer.map_gids f) t.layers in
+      {t with layers}
   end
 
   type map = Map.t
@@ -763,6 +824,8 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
               (firstgid, Util.Filename.reloc fname ~from_ ~to_) )
             t.tileset;
         object_ = Object.reloc t.object_ ~from_ ~to_ }
+
+    let map_gids f t = {t with object_ = Object.map_gids f t.object_}
   end
 
   type template = Template.t

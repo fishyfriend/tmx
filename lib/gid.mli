@@ -20,3 +20,4 @@ val flags : t -> Flags.t
 val of_int32 : int32 -> t
 val to_int32 : t -> int32
 val max_id : int
+val rebase : from_:int -> to_:int -> t -> t

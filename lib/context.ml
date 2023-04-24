@@ -118,3 +118,28 @@ let make_getters t : (module Sigs.Getters) =
     let get_class k ~useas = get_class k !t ~useas
     let get_tile gid = get_tile gid !t
   end )
+
+let map_remap_gid t map gid =
+  if Gid.id gid = 0 then gid
+  else
+    match Map.get_tile_ref map gid with
+    | None -> Util.Error.not_found "gid" (Gid.show gid)
+    | Some (firstgid0, ts, _) ->
+      ( match get_tileset ts t with
+      | None -> Util.Error.not_found "tileset" ts
+      | Some (firstgid, _) -> Gid.rebase ~from_:firstgid0 ~to_:firstgid gid )
+
+let map_remap_gids t map = Map.map_gids (map_remap_gid t map) map
+
+let template_remap_gid t tem gid =
+  if Gid.id gid = 0 then gid
+  else
+    match Template.tileset tem with
+    | None -> Util.Error.not_found "gid" (Gid.show gid)
+    | Some (firstgid0, ts) ->
+      ( match get_tileset ts t with
+      | None -> Util.Error.not_found "tileset" ts
+      | Some (firstgid, _) -> Gid.rebase ~from_:firstgid0 ~to_:firstgid gid )
+
+let template_remap_gids t tem =
+  Template.map_gids (template_remap_gid t tem) tem

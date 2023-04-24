@@ -14,7 +14,7 @@ type compression = Compression.t
 type t =
   { encoding : Encoding.t option;
     compression : Compression.t option;
-    bytes : bytes [@main] }
+    bytes : bytes [@opaque] [@main] }
 [@@deriving eq, ord, show {with_path = false}, make]
 
 let create ?encoding ?compression n =

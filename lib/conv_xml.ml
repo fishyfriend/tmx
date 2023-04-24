@@ -329,7 +329,9 @@ let tilelayer_of_xml xml =
   let height = attr "height" xml int_of_string in
   let data =
     child_opt "data" xml @@ fun xml ->
-    data_of_xml_chunked ~dims:(width, height) xml in
+    match children' "chunk" xml with
+    | [] -> data_of_xml xml
+    | _ -> data_of_xml_chunked ~dims:(width, height) xml in
   Layer.Tilelayer.make ~width ~height ?data ()
 
 let draworder_of_string s =
@@ -458,7 +460,7 @@ let map_of_xml xml =
   let properties = child_opt "properties" xml properties_of_xml in
   let tilesets = children "tileset" xml map_tileset_of_xml in
   let layers = layers_of_xml xml in
-  let variant = map_variant_of_xml xml in
+  let geometry = map_variant_of_xml xml in
   Map.make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
     ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
-    ?backgroundcolor ?infinite ?properties ~tilesets ~layers ~variant ()
+    ?backgroundcolor ?infinite ?properties ~tilesets ~layers ~geometry ()

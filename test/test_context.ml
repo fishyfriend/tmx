@@ -57,7 +57,7 @@ let test_tile =
     let l = Layer.make ~variant:(`Objectgroup og) () in
     Map.make ~version:"0.0" ~width:1 ~height:1 ~tilewidth:16 ~tileheight:16
       ~tilesets:[(1, "ts1"); (20, "ts2")]
-      ~layers:[l] ~variant:`Orthogonal () in
+      ~layers:[l] ~geometry:`Orthogonal () in
   let t =
     C.default
     |> C.add_tileset_exn "ts1" ts1

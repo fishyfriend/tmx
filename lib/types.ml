@@ -143,30 +143,21 @@ type tileset =
     grid : grid option;
     properties : property list;
     tiles : tile Int_map.t;
-    (* [@opaque] *)
-    (* [@main] *)
     variant : tileset_variant }
-(* [@@deriving eq, ord, show {with_path = false}] *)
 
 type staggeraxis = [`X | `Y]
-(* [@@deriving eq, ord, show {with_path = false}] *)
 
 type staggerindex = [`Even | `Odd]
-(* [@@deriving eq, ord, show {with_path = false}] *)
 
 type staggered = {staggeraxis : staggeraxis; staggerindex : staggerindex}
-(* [@@deriving eq, ord, show {with_path = false}, make] *)
 
 type hexagonal =
   {hexsidelength : int; staggeraxis : staggeraxis; staggerindex : staggerindex}
-(* [@@deriving eq, ord, show {with_path = false}, make] *)
 
 type renderorder = [`Right_down | `Right_up | `Left_down | `Left_up]
-(* [@@deriving eq, ord, show {with_path = false}] *)
 
-type map_variant =
+type geometry =
   [`Orthogonal | `Isometric | `Staggered of staggered | `Hexagonal of hexagonal]
-(* [@@deriving eq, ord, show {with_path = false}] *)
 
 type map =
   { version : string;
@@ -185,7 +176,7 @@ type map =
     properties : property list;
     tilesets : (int * string) list;
     layers : layer list;
-    variant : map_variant }
+    geometry : geometry }
 
 type template = {tileset : (int * string) option; object_ : object_}
 

@@ -2,6 +2,7 @@
    this behavior configurable. *)
 (* TODO: tests for file path handling *)
 (* TODO: gid remapping *)
+(* TODO: the monadic code is gnarly, can it be de-monadized? *)
 
 module C = Context
 module S = State
@@ -23,10 +24,27 @@ let make ~root : t =
       the_context := context ;
       result
 
+    let tilesets () = C.tilesets !the_context
+    let templates () = C.templates !the_context
+    let files () = C.files !the_context
+    let customtypes () = C.customtypes !the_context
+    let maps () = C.maps !the_context
+
     module Getters = (val Context.make_getters the_context)
 
     include Getters
     include Core.Make (Getters)
+
+    include struct
+      open Util.Option.Infix
+      let not_found n k () = UE.not_found n k
+      let get_class_exn k ~useas = get_class k ~useas >|? not_found "class" k
+      let get_file_exn k = get_file k >|? not_found "loaded file" k
+      let get_map_exn k = get_map k >|? not_found "map" k
+      let get_template_exn k = get_template k >|? not_found "template" k
+      let get_tile_exn gid = get_tile gid >|? not_found "tile" (Gid.show gid)
+      let get_tileset_exn k = get_tileset k >|? not_found "tileset" k
+    end
 
     open S.Syntax
 
@@ -66,11 +84,14 @@ let make ~root : t =
         Conv_xml.(with_xml_from_channel ic template_of_xml)
         |> Template.reloc ~from_:(Filename.dirname fname) ~to_:"" in
       let* () =
-        S.update (C.add_template_exn fname tem) >>= fun () ->
         S.iter_option
           (fun (_, ts) -> s_load_tileset_xml ts >|= ignore)
           (Template.tileset tem)
         >>= fun () -> s_load_for_object (Template.object_ tem) in
+      let* tem =
+        let+ c = S.get () in
+        C.template_remap_gids c tem in
+      let* () = S.update (C.add_template_exn fname tem) in
       S.return tem
 
     and s_load_map_xml fname : _ S.t =
@@ -80,12 +101,15 @@ let make ~root : t =
         Conv_xml.(with_xml_from_channel ic map_of_xml)
         |> Map.reloc ~from_:(Filename.dirname fname) ~to_:"" in
       let* () =
-        S.update (C.add_map_exn fname m) >>= fun () ->
         S.iter_list s_load_for_property (Map.properties m) >>= fun () ->
         S.iter_list
           (fun (_, ts) -> s_load_tileset_xml ts >|= ignore)
           (Map.tilesets m)
         >>= fun () -> S.iter_list s_load_for_layer (Map.layers m) in
+      let* m =
+        let+ c = S.get () in
+        C.map_remap_gids c m in
+      let* () = S.update (C.add_map_exn fname m) in
       S.return m
 
     and s_load_customtypes_json fname : _ S.t =

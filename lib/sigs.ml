@@ -32,6 +32,10 @@ module type ClassPropsT = sig
   include PropsT with type t := t
 end
 
+module type GidsT = sig
+  include T val map_gids : (Gid.t -> Gid.t) -> t -> t
+end
+
 module type Core = sig
   module Error : module type of Error
 
@@ -147,6 +151,7 @@ module type Core = sig
         | `Tile of Gid.t ]
 
       include StdT with type t := t
+      include GidsT with type t := t
     end
 
     type shape = Shape.t
@@ -183,6 +188,7 @@ module type Core = sig
     include StdT with type t := t
     include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
+    include GidsT with type t := t
   end
 
   type object_ = Object.t
@@ -198,7 +204,10 @@ module type Core = sig
       val height : t -> int
       val data : t -> Data.t option
 
+      val gid_at : col:int -> row:int -> t -> Gid.t
+
       include StdT with type t := t
+      include GidsT with type t := t
     end
 
     type tilelayer = Tilelayer.t
@@ -222,6 +231,7 @@ module type Core = sig
 
       include StdT with type t := t
       include RelocT with type t := t
+      include GidsT with type t := t
     end
 
     type objectgroup = Objectgroup.t
@@ -251,6 +261,7 @@ module type Core = sig
 
       include StdT with type t := t
       include RelocT with type t := t
+      include GidsT with type t := t
     end
 
     type variant = Variant.t
@@ -289,6 +300,7 @@ module type Core = sig
     include StdT with type t := t
     include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
+    include GidsT with type t := t
   end
 
   type layer = Layer.t
@@ -427,9 +439,6 @@ module type Core = sig
 
     type t
 
-    include StdT with type t := t
-    include RelocT with type t := t
-
     val make :
       name:string ->
       ?class_:string ->
@@ -457,6 +466,8 @@ module type Core = sig
     val max_id : t -> int
     val get_tile : t -> int -> Tile.t option
 
+    include StdT with type t := t
+    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
 
@@ -515,7 +526,7 @@ module type Core = sig
 
     type renderorder = Renderorder.t
 
-    module Variant : sig
+    module Geometry : sig
       type t =
         [ `Hexagonal of Hexagonal.t
         | `Isometric
@@ -523,7 +534,7 @@ module type Core = sig
         | `Staggered of Staggered.t ]
     end
 
-    type variant = Variant.t
+    type geometry = Geometry.t
 
     type t
 
@@ -544,7 +555,7 @@ module type Core = sig
       ?properties:Property.t list ->
       ?tilesets:(int * string) list ->
       ?layers:Layer.t list ->
-      variant:variant ->
+      geometry:geometry ->
       unit ->
       t
 
@@ -562,16 +573,19 @@ module type Core = sig
     val infinite : t -> bool
     val tilesets : t -> (int * string) list
     val layers : t -> Layer.t list
-    val variant : t -> variant
+    val geometry : t -> geometry
+    val nextlayerid : t -> int
+    val nextobjectid : t -> int
+
     val objects : t -> Object.t list
     val get_object : t -> int -> Object.t option
     val get_object_exn : t -> int -> Object.t
-    val nextlayerid : t -> int
-    val nextobjectid : t -> int
+    val get_tile_ref : t -> Gid.t -> (int * string * int) option
 
     include StdT with type t := t
     include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
+    include GidsT with type t := t
   end
 
   type map = Map.t
@@ -585,6 +599,7 @@ module type Core = sig
 
     include StdT with type t := t
     include RelocT with type t := t
+    include GidsT with type t := t
   end
 
   type template = Template.t
@@ -670,6 +685,12 @@ module type Core_generic =
 module type Loader = sig
   include Core
 
+  val tilesets : unit -> (int * string * Tileset.t) list
+  val templates : unit -> (string * Template.t) list
+  val files : unit -> (string * string) list
+  val customtypes : unit -> Customtype.t list
+  val maps : unit -> (string * Map.t) list
+
   val get_tileset : string -> Tileset.t option
   val get_template : string -> Template.t option
   val get_customtypes : string -> Customtype.t list
@@ -677,6 +698,13 @@ module type Loader = sig
   val get_map : string -> Map.t option
   val get_file : string -> string option
   val get_tile : Gid.t -> Tile.t option
+
+  val get_tileset_exn : string -> Tileset.t
+  val get_template_exn : string -> Template.t
+  val get_class_exn : string -> useas:Class.useas -> Class.t
+  val get_map_exn : string -> Map.t
+  val get_file_exn : string -> string
+  val get_tile_exn : Gid.t -> Tile.t
 
   val load_tileset_xml : string -> (Tileset.t, Error.t) result
   val load_template_xml : string -> (Template.t, Error.t) result
