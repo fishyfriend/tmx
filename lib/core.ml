@@ -1,5 +1,3 @@
-(* TODO: move auxiliary functions like reloc & map_gids to an [Aux] module *)
-
 module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
   open Util.Option.Infix
   open Types
@@ -23,7 +21,41 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
   type data = Data.t
 
-  module Image = Image
+  module Image = struct
+    module Format = struct
+      type t = [`Bmp | `Gif | `Jpg | `Png]
+      [@@deriving eq, ord, show {with_path = false}]
+    end
+
+    type format = Format.t
+
+    module Source = struct
+      type t = [`File of string | `Embed of Format.t * Data.t]
+      [@@deriving eq, ord, show {with_path = false}]
+
+      let relocate ~from_dir ~to_dir t =
+        match t with
+        | `File fname -> `File (Util.Filename.relocate ~from_dir ~to_dir fname)
+        | _ -> t
+    end
+
+    type source = Source.t
+
+    type t = Types.image =
+      { source : Source.t;
+        trans : Color.t option;
+        width : int option;
+        height : int option }
+    [@@deriving eq, ord, show {with_path = false}, make]
+
+    let source t = t.source
+    let trans t = t.trans
+    let width t = t.width
+    let height t = t.height
+
+    let relocate ~from_dir ~to_dir t =
+      {t with source = Source.relocate ~from_dir ~to_dir t.source}
+  end
 
   type image = Image.t
 
@@ -79,11 +111,11 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     include (P : Props.S with type t := t)
 
-    let rec reloc t ~from_ ~to_ =
+    let rec relocate ~from_dir ~to_dir t =
       let value =
         match t.value with
-        | `File fname -> `File (Util.Filename.reloc fname ~from_ ~to_)
-        | `Class ts -> `Class (List.map (reloc ~from_ ~to_) ts)
+        | `File fname -> `File (Util.Filename.relocate ~from_dir ~to_dir fname)
+        | `Class ts -> `Class (List.map (relocate ~from_dir ~to_dir) ts)
         | v -> v in
       {t with value}
   end
@@ -217,9 +249,10 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     include (P : Props.S with type t := t)
 
-    let reloc t ~from_ ~to_ =
-      let template = t.template >|= Util.Filename.reloc ~from_ ~to_ in
-      let properties = List.map (Property.reloc ~from_ ~to_) t.properties in
+    let relocate ~from_dir ~to_dir t =
+      let template = t.template >|= Util.Filename.relocate ~from_dir ~to_dir in
+      let properties =
+        List.map (Property.relocate ~from_dir ~to_dir) t.properties in
       {t with template; properties}
 
     let map_gids f t = {t with shape = t.shape >|= Shape.map_gids f}
@@ -296,8 +329,10 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       let get_object_exn t id =
         get_object t id >|? fun () -> Util.Error.object_not_found id
 
-      let reloc t ~from_ ~to_ =
-        {t with objects = Int_map.map (Object.reloc ~from_ ~to_) t.objects}
+      let relocate ~from_dir ~to_dir t =
+        { t with
+          objects = Int_map.map (Object.relocate ~from_dir ~to_dir) t.objects
+        }
 
       let map_gids f t =
         {t with objects = Int_map.map (Object.map_gids f) t.objects}
@@ -314,8 +349,8 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       let repeatx t = t.repeatx |? false
       let repeaty t = t.repeaty |? false
 
-      let reloc t ~from_ ~to_ =
-        let image = Option.map (Image.reloc ~from_ ~to_) t.image in
+      let relocate ~from_dir ~to_dir t =
+        let image = Option.map (Image.relocate ~from_dir ~to_dir) t.image in
         {t with image}
     end
 
@@ -347,17 +382,20 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       | `Group of t list ]
     [@@deriving eq, ord, show {with_path = false}]
 
-    let rec reloc t ~from_ ~to_ =
-      let properties = List.map (Property.reloc ~from_ ~to_) t.properties in
-      let variant = reloc_variant t.variant ~from_ ~to_ in
+    let rec relocate ~from_dir ~to_dir t =
+      let properties =
+        List.map (Property.relocate ~from_dir ~to_dir) t.properties in
+      let variant = relocate_variant ~from_dir ~to_dir t.variant in
       {t with properties; variant}
 
-    and reloc_variant v ~from_ ~to_ =
+    and relocate_variant ~from_dir ~to_dir v =
       match v with
       | `Tilelayer _ -> v
-      | `Objectgroup og -> `Objectgroup (Objectgroup.reloc og ~from_ ~to_)
-      | `Imagelayer il -> `Imagelayer (Imagelayer.reloc il ~from_ ~to_)
-      | `Group ts -> `Group (List.map (reloc ~from_ ~to_) ts)
+      | `Objectgroup og ->
+          `Objectgroup (Objectgroup.relocate ~from_dir ~to_dir og)
+      | `Imagelayer il ->
+          `Imagelayer (Imagelayer.relocate ~from_dir ~to_dir il)
+      | `Group ts -> `Group (List.map (relocate ~from_dir ~to_dir) ts)
 
     let rec map_gids f t = {t with variant = map_gids_variant f t.variant}
 
@@ -370,9 +408,6 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     module Variant = struct
       type t = variant [@@deriving eq, ord, show {with_path = false}]
-
-      let reloc t ~from_ ~to_ = reloc_variant t ~from_ ~to_
-      let map_gids f t = map_gids_variant f t
     end
 
     let id t = t.id |? 0
@@ -449,10 +484,12 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     include (P : Props.S with type t := t)
 
-    let reloc t ~from_ ~to_ =
-      let properties = List.map (Property.reloc ~from_ ~to_) t.properties in
-      let image = Option.map (Image.reloc ~from_ ~to_) t.image in
-      let objectgroup = List.map (Object.reloc ~from_ ~to_) t.objectgroup in
+    let relocate ~from_dir ~to_dir t =
+      let properties =
+        List.map (Property.relocate ~from_dir ~to_dir) t.properties in
+      let image = Option.map (Image.relocate ~from_dir ~to_dir) t.image in
+      let objectgroup =
+        List.map (Object.relocate ~from_dir ~to_dir) t.objectgroup in
       {t with properties; image; objectgroup}
   end
 
@@ -486,8 +523,8 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       let margin t = t.margin |? 0
       let image t = t.image
 
-      let reloc t ~from_ ~to_ =
-        let image = Image.reloc t.image ~from_ ~to_ in
+      let relocate ~from_dir ~to_dir t =
+        let image = Image.relocate ~from_dir ~to_dir t.image in
         {t with image}
     end
 
@@ -534,9 +571,9 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       type t = [`Single of Single.t | `Collection]
       [@@deriving eq, ord, show {with_path = false}]
 
-      let reloc t ~from_ ~to_ =
+      let relocate ~from_dir ~to_dir t =
         match t with
-        | `Single s -> `Single (Single.reloc s ~from_ ~to_)
+        | `Single s -> `Single (Single.relocate ~from_dir ~to_dir s)
         | _ -> t
     end
 
@@ -640,11 +677,12 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     include (P : Props.S with type t := t)
 
-    let reloc t ~from_ ~to_ =
+    let relocate ~from_dir ~to_dir t =
       { t with
-        properties = List.map (Property.reloc ~from_ ~to_) t.properties;
-        tiles = Int_map.map (Tile.reloc ~from_ ~to_) t.tiles;
-        variant = Variant.reloc t.variant ~from_ ~to_ }
+        properties =
+          List.map (Property.relocate ~from_dir ~to_dir) t.properties;
+        tiles = Int_map.map (Tile.relocate ~from_dir ~to_dir) t.tiles;
+        variant = Variant.relocate ~from_dir ~to_dir t.variant }
   end
 
   type tileset = Tileset.t
@@ -818,14 +856,15 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     include (P : Props.S with type t := t)
 
-    let reloc t ~from_ ~to_ =
-      let properties = List.map (Property.reloc ~from_ ~to_) t.properties in
+    let relocate ~from_dir ~to_dir t =
+      let properties =
+        List.map (Property.relocate ~from_dir ~to_dir) t.properties in
       let tilesets =
         List.map
           (fun (firstgid, fname) ->
-            (firstgid, Util.Filename.reloc fname ~from_ ~to_) )
+            (firstgid, Util.Filename.relocate ~from_dir ~to_dir fname) )
           t.tilesets in
-      let layers = List.map (Layer.reloc ~from_ ~to_) t.layers in
+      let layers = List.map (Layer.relocate ~from_dir ~to_dir) t.layers in
       {t with properties; tilesets; layers}
 
     let map_gids f t =
@@ -848,13 +887,13 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
     let tileset t = t.tileset
     let object_ t = t.object_
 
-    let reloc t ~from_ ~to_ =
+    let relocate ~from_dir ~to_dir t =
       { tileset =
           Option.map
             (fun (firstgid, fname) ->
-              (firstgid, Util.Filename.reloc fname ~from_ ~to_) )
+              (firstgid, Util.Filename.relocate ~from_dir ~to_dir fname) )
             t.tileset;
-        object_ = Object.reloc t.object_ ~from_ ~to_ }
+        object_ = Object.relocate ~from_dir ~to_dir t.object_ }
 
     let map_gids f t = {t with object_ = Object.map_gids f t.object_}
   end
@@ -888,8 +927,9 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
     let useas t = t.useas
     let members t = t.members
 
-    let reloc t ~from_ ~to_ =
-      {t with members = List.map (Property.reloc ~from_ ~to_) t.members}
+    let relocate ~from_dir ~to_dir t =
+      { t with
+        members = List.map (Property.relocate ~from_dir ~to_dir) t.members }
   end
 
   type class_ = Class.t
@@ -903,8 +943,10 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       type t = [`Class of Class.t | `Enum of Enum.t]
       [@@deriving eq, ord, show {with_path = false}]
 
-      let reloc t ~from_ ~to_ =
-        match t with `Class c -> `Class (Class.reloc c ~from_ ~to_) | _ -> t
+      let relocate ~from_dir ~to_dir t =
+        match t with
+        | `Class c -> `Class (Class.relocate ~from_dir ~to_dir c)
+        | _ -> t
     end
 
     type variant = Variant.t
@@ -916,9 +958,24 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
     let name t = t.name
     let variant t = t.variant
 
-    let reloc t ~from_ ~to_ =
-      {t with variant = Variant.reloc t.variant ~from_ ~to_}
+    let relocate ~from_dir ~to_dir t =
+      {t with variant = Variant.relocate ~from_dir ~to_dir t.variant}
   end
 
   type customtype = Customtype.t
+
+  module Remappers : Sigs.Remappers = struct
+    let property_relocate = Property.relocate
+    let object_relocate = Object.relocate
+    let layer_relocate = Layer.relocate
+    let tile_relocate = Tile.relocate
+    let tileset_relocate = Tileset.relocate
+    let map_relocate = Map.relocate
+    let template_relocate = Template.relocate
+    let customtype_relocate = Customtype.relocate
+    let object_map_gids = Object.map_gids
+    let layer_map_gids = Layer.map_gids
+    let map_map_gids = Map.map_gids
+    let template_map_gids = Template.map_gids
+  end
 end

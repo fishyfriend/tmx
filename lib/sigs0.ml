@@ -20,7 +20,3 @@ module type StdT = sig
   include OrdT with type t := t
   include ShowT with type t := t
 end
-
-module type RelocT = sig
-  include T val reloc : t -> from_:string -> to_:string -> t
-end

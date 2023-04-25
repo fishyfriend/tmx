@@ -129,7 +129,7 @@ let map_remap_gid t map gid =
       | None -> Util.Error.not_found "tileset" ts
       | Some (firstgid, _) -> Gid.rebase ~from_:firstgid0 ~to_:firstgid gid )
 
-let map_remap_gids t map = Map.map_gids (map_remap_gid t map) map
+let map_remap_gids t map = Remappers.map_map_gids (map_remap_gid t map) map
 
 let template_remap_gid t tem gid =
   if Gid.id gid = 0 then gid
@@ -142,4 +142,4 @@ let template_remap_gid t tem gid =
       | Some (firstgid, _) -> Gid.rebase ~from_:firstgid0 ~to_:firstgid gid )
 
 let template_remap_gids t tem =
-  Template.map_gids (template_remap_gid t tem) tem
+  Remappers.template_map_gids (template_remap_gid t tem) tem

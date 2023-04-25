@@ -45,9 +45,9 @@ module Filename = struct
          []
     |> List.rev
 
-  let reloc ~from_ ~to_ path =
-    let path = Filename.concat from_ path in
-    let xs, ys = (split path, split to_) in
+  let relocate ~from_dir ~to_dir path =
+    let path = Filename.concat from_dir path in
+    let xs, ys = (split path, split to_dir) in
     let rec aux xs ys =
       match (xs, ys) with
       | x :: xs, y :: ys when x = y -> aux xs ys

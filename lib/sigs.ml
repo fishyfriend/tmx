@@ -10,6 +10,25 @@ module type Getters = sig
   val get_tile : Gid.t -> Types.tile option
 end
 
+type 'a relocate = from_dir:string -> to_dir:string -> 'a -> 'a
+type 'a map_gids = (Gid.t -> Gid.t) -> 'a -> 'a
+
+module type Remappers = sig
+  val property_relocate : Types.property relocate
+  val object_relocate : Types.object_ relocate
+  val layer_relocate : Types.layer relocate
+  val tile_relocate : Types.tile relocate
+  val tileset_relocate : Types.tileset relocate
+  val map_relocate : Types.map relocate
+  val template_relocate : Types.template relocate
+  val customtype_relocate : Types.customtype relocate
+
+  val object_map_gids : Types.object_ map_gids
+  val layer_map_gids : Types.layer map_gids
+  val map_map_gids : Types.map map_gids
+  val template_map_gids : Types.template map_gids
+end
+
 module type ClassT = sig
   type t
 
@@ -32,10 +51,6 @@ module type ClassPropsT = sig
   include PropsT with type t := t
 end
 
-module type GidsT = sig
-  include T val map_gids : (Gid.t -> Gid.t) -> t -> t
-end
-
 module type Core = sig
   module Error : module type of Error
 
@@ -53,7 +68,40 @@ module type Core = sig
 
   type data = Data.t
 
-  module Image : module type of Image
+  module Image : sig
+    module Format : sig
+      type t = [`Bmp | `Gif | `Jpg | `Png]
+
+      include Sigs0.StdT with type t := t
+    end
+
+    type format = Format.t
+
+    module Source : sig
+      type t = [`File of string | `Embed of Format.t * Data.t]
+
+      include StdT with type t := t
+    end
+
+    type source = Source.t
+
+    type t
+
+    val make :
+      source:Source.t ->
+      ?trans:Color.t ->
+      ?width:int ->
+      ?height:int ->
+      unit ->
+      t
+
+    val source : t -> Source.t
+    val trans : t -> Color.t option
+    val width : t -> int option
+    val height : t -> int option
+
+    include StdT with type t := t
+  end
 
   type image = Image.t
 
@@ -85,7 +133,6 @@ module type Core = sig
     val value : t -> Value.t
 
     include StdT with type t := t
-    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := t
   end
 
@@ -151,7 +198,6 @@ module type Core = sig
         | `Tile of Gid.t ]
 
       include StdT with type t := t
-      include GidsT with type t := t
     end
 
     type shape = Shape.t
@@ -186,9 +232,7 @@ module type Core = sig
     val height : t -> float
 
     include StdT with type t := t
-    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
-    include GidsT with type t := t
   end
 
   type object_ = Object.t
@@ -207,7 +251,6 @@ module type Core = sig
       val gid_at : col:int -> row:int -> t -> Gid.t
 
       include StdT with type t := t
-      include GidsT with type t := t
     end
 
     type tilelayer = Tilelayer.t
@@ -230,8 +273,6 @@ module type Core = sig
       val get_object_exn : t -> int -> Object.t
 
       include StdT with type t := t
-      include RelocT with type t := t
-      include GidsT with type t := t
     end
 
     type objectgroup = Objectgroup.t
@@ -245,7 +286,6 @@ module type Core = sig
       val repeaty : t -> bool
 
       include StdT with type t := t
-      include RelocT with type t := t
     end
 
     type imagelayer = Imagelayer.t
@@ -260,8 +300,6 @@ module type Core = sig
         | `Group of layer list ]
 
       include StdT with type t := t
-      include RelocT with type t := t
-      include GidsT with type t := t
     end
 
     type variant = Variant.t
@@ -298,9 +336,7 @@ module type Core = sig
     val get_object_exn : t -> int -> Object.t
 
     include StdT with type t := t
-    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
-    include GidsT with type t := t
   end
 
   type layer = Layer.t
@@ -344,7 +380,6 @@ module type Core = sig
     val animation : t -> Frame.t list
 
     include StdT with type t := t
-    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
 
@@ -365,7 +400,6 @@ module type Core = sig
       type t
 
       include StdT with type t := t
-      include RelocT with type t := t
 
       val make :
         tilecount:int ->
@@ -432,7 +466,6 @@ module type Core = sig
       type t = [`Single of Single.t | `Collection]
 
       include StdT with type t := t
-      include RelocT with type t := t
     end
 
     type variant = Variant.t
@@ -468,7 +501,6 @@ module type Core = sig
     val get_tile_exn : t -> int -> Tile.t
 
     include StdT with type t := t
-    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
   end
 
@@ -587,9 +619,7 @@ module type Core = sig
     val get_tile_ref : t -> Gid.t -> (int * string * int) option
 
     include StdT with type t := t
-    include RelocT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
-    include GidsT with type t := t
   end
 
   type map = Map.t
@@ -602,8 +632,6 @@ module type Core = sig
     val object_ : t -> Object.t
 
     include StdT with type t := t
-    include RelocT with type t := t
-    include GidsT with type t := t
   end
 
   type template = Template.t
@@ -632,7 +660,6 @@ module type Core = sig
     val members : t -> Property.t list
 
     include StdT with type t := t
-    include RelocT with type t := t
   end
 
   type class_ = Class.t
@@ -646,7 +673,6 @@ module type Core = sig
       type t = [`Class of Class.t | `Enum of Enum.t]
 
       include StdT with type t := t
-      include RelocT with type t := t
     end
 
     type variant = Variant.t
@@ -659,32 +685,35 @@ module type Core = sig
     val variant : t -> Variant.t
 
     include StdT with type t := t
-    include RelocT with type t := t
   end
 
   type customtype = Customtype.t
 end
 
-module type Core_generic =
-  Core
-    with type Property.t = Types.property
-     and type Object.Text.t = Types.text
-     and type Object.t = Types.object_
-     and type Layer.Tilelayer.t = Types.tilelayer
-     and type Layer.Objectgroup.t = Types.objectgroup
-     and type Layer.Imagelayer.t = Types.imagelayer
-     and type Layer.t = Types.layer
-     and type Tile.Frame.t = Types.frame
-     and type Tile.t = Types.tile
-     and type Tileset.Tileoffset.t = Types.tileoffset
-     and type Tileset.Single.t = Types.single
-     and type Tileset.t = Types.tileset
-     and type Map.Staggered.t = Types.staggered
-     and type Map.Hexagonal.t = Types.hexagonal
-     and type Map.t = Types.map
-     and type Template.t = Types.template
-     and type Class.t = Types.class_
-     and type Customtype.t = Types.customtype
+module type Core_generic = sig
+  include
+    Core
+      with type Property.t = Types.property
+       and type Object.Text.t = Types.text
+       and type Object.t = Types.object_
+       and type Layer.Tilelayer.t = Types.tilelayer
+       and type Layer.Objectgroup.t = Types.objectgroup
+       and type Layer.Imagelayer.t = Types.imagelayer
+       and type Layer.t = Types.layer
+       and type Tile.Frame.t = Types.frame
+       and type Tile.t = Types.tile
+       and type Tileset.Tileoffset.t = Types.tileoffset
+       and type Tileset.Single.t = Types.single
+       and type Tileset.t = Types.tileset
+       and type Map.Staggered.t = Types.staggered
+       and type Map.Hexagonal.t = Types.hexagonal
+       and type Map.t = Types.map
+       and type Template.t = Types.template
+       and type Class.t = Types.class_
+       and type Customtype.t = Types.customtype
+
+  module Remappers : Remappers
+end
 
 module type Loader = sig
   include Core

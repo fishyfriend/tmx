@@ -1,5 +1,15 @@
 module Int_map = Map.Make (Int)
 
+type format = [`Bmp | `Gif | `Jpg | `Png]
+
+type source = [`File of string | `Embed of format * Data.t]
+
+type image =
+  { source : source;
+    trans : Color.t option;
+    width : int option;
+    height : int option }
+
 type property = {name : string; propertytype : string option; value : value}
 
 and value =
@@ -60,7 +70,7 @@ type draworder = [`Topdown | `Index]
 type objectgroup = {draworder : draworder option; objects : object_ Int_map.t}
 
 type imagelayer =
-  {image : Image.t option; repeatx : bool option; repeaty : bool option}
+  {image : image option; repeatx : bool option; repeaty : bool option}
 
 type layer =
   { id : int option;
@@ -96,7 +106,7 @@ type tile =
     width : int option;
     height : int option;
     properties : property list;
-    image : Image.t option;
+    image : image option;
     objectgroup : object_ list;
     animation : frame list }
 
@@ -110,7 +120,7 @@ type single =
     tileheight : int;
     spacing : int option;
     margin : int option;
-    image : Image.t }
+    image : image }
 
 type objectalignment =
   [ `Unspecified

@@ -68,7 +68,8 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let ts =
         Conv_xml.(with_xml_from_channel ic tileset_of_xml)
-        |> Tileset.reloc ~from_:(Filename.dirname fname) ~to_:"" in
+        |> Remappers.tileset_relocate ~from_dir:(Filename.dirname fname)
+             ~to_dir:"" in
       let* () =
         S.update (C.add_tileset_exn fname ts) >>= fun () ->
         S.iter_list s_load_for_property (Tileset.properties ts) >>= fun () ->
@@ -80,7 +81,8 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let tem =
         Conv_xml.(with_xml_from_channel ic template_of_xml)
-        |> Template.reloc ~from_:(Filename.dirname fname) ~to_:"" in
+        |> Remappers.template_relocate ~from_dir:(Filename.dirname fname)
+             ~to_dir:"" in
       let* () =
         S.iter_option
           (fun (_, ts) -> s_load_tileset_xml ts >|= ignore)
@@ -97,7 +99,8 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let m =
         Conv_xml.(with_xml_from_channel ic map_of_xml)
-        |> Map.reloc ~from_:(Filename.dirname fname) ~to_:"" in
+        |> Remappers.map_relocate ~from_dir:(Filename.dirname fname) ~to_dir:""
+      in
       let* () =
         S.iter_list s_load_for_property (Map.properties m) >>= fun () ->
         S.iter_list
@@ -114,8 +117,9 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let cts =
         Conv_json.(with_json_from_channel ic customtypes_of_json)
-        |> List.map (Customtype.reloc ~from_:(Filename.dirname fname) ~to_:"")
-      in
+        |> List.map
+             (Remappers.customtype_relocate ~from_dir:(Filename.dirname fname)
+                ~to_dir:"" ) in
       let* () =
         S.iter_list (fun ct -> S.update (C.add_customtype_exn ct)) cts
         >>= fun () -> S.iter_list s_load_for_customtype cts in
