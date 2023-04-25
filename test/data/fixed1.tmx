@@ -29,7 +29,11 @@
   <objectgroup id="7" name="Object Layer 4">
    <object id="21" gid="11" x="272.75" y="142.25" width="36" height="48"/>
    <object id="34" gid="20" x="309.75" y="114.75" width="28" height="16"/>
-   <object id="35" gid="21" x="104.5" y="107.25" width="16" height="16"/>
+   <object id="35" gid="21" x="104.5" y="107.25" width="16" height="16">
+    <properties>
+     <property name="foo" type="file" value="../test_loader.ml"/>
+    </properties>
+   </object>
    <object id="36" gid="21" x="27.4167" y="183.75" width="16" height="16"/>
    <object id="37" gid="22" x="197.75" y="55.5" width="36" height="48"/>
   </objectgroup>
@@ -63,4 +67,7 @@
   <object id="29" gid="22" x="324.75" y="162.75" width="36" height="48"/>
   <object id="30" gid="22" x="242.75" y="66.25" width="36" height="48"/>
  </objectgroup>
+ <properties>
+  <property name="bar" type="file" value="../test_loader.ml"/>
+ </properties>
 </map>

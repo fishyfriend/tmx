@@ -1,7 +1,5 @@
 (* TODO: allow to fail gracefully when unable to autoload a resource file. make
    this behavior configurable. *)
-(* TODO: tests for file path handling *)
-(* TODO: gid remapping *)
 (* TODO: the monadic code is gnarly, can it be de-monadized? *)
 
 module C = Context
