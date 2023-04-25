@@ -555,9 +555,39 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
     let make ~name ?class_ ~columns ?objectalignment ?tilerendersize ?fillmode
         ?tileoffset ?grid ?(properties = []) ~variant tiles =
       let tiles =
-        List.to_seq tiles
-        |> Seq.map (fun tile -> (Tile.id tile, tile))
-        |> Int_map.of_seq in
+        match variant with
+        | `Collection ->
+            List.fold_left
+              (fun tiles tile -> Int_map.add (Tile.id tile) tile tiles)
+              Int_map.empty tiles
+        | `Single single ->
+            let setup_tile tile : tile =
+              let image = Some (Single.image single) in
+              let x, y, width, height =
+                let width = Single.tilewidth single in
+                let height = Single.tileheight single in
+                let margin = Single.margin single in
+                let spacing = Single.spacing single in
+                let col = Tile.id tile mod columns in
+                let row = Tile.id tile / columns in
+                let x = margin + (col * (width + spacing)) in
+                let y = margin + (row * (height + spacing)) in
+                (Some x, Some y, Some width, Some height) in
+              {tile with image; x; y; width; height} in
+            let ensure_tile (tiles : tile Int_map.t as 'a) id : 'a =
+              Int_map.update id
+                (fun tile -> Some (tile >|? Tile.make ~id |> setup_tile))
+                tiles in
+            let tilecount = Single.tilecount single in
+            let tiles =
+              List.fold_left
+                (fun tiles tile ->
+                  let id = Tile.id tile in
+                  if id < tilecount then Int_map.add (Tile.id tile) tile tiles
+                  else tiles )
+                Int_map.empty tiles in
+            let id_seq = Seq.init tilecount Fun.id in
+            Seq.fold_left ensure_tile tiles id_seq in
       { name;
         class_;
         columns;
@@ -596,27 +626,11 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       | `Collection ->
           Int_map.fold (fun id _ max_id -> max id max_id) t.tiles 0
 
-    let get_tile t id : Tile.t option =
-      match variant t with
-      | `Collection -> Int_map.find_opt id t.tiles
-      | `Single single ->
-          if id >= tilecount t then None
-          else
-            let tile =
-              Int_map.find_opt id t.tiles >|? fun () -> Tile.make ~id () in
-            let image = Some (Single.image single) in
-            let x, y, width, height =
-              let width = Single.tilewidth single in
-              let height = Single.tileheight single in
-              let margin = Single.margin single in
-              let spacing = Single.spacing single in
-              let columns = columns t in
-              let col = id mod columns in
-              let row = id / columns in
-              let x = margin + (col * (width + spacing)) in
-              let y = margin + (row * (height + spacing)) in
-              (Some x, Some y, Some width, Some height) in
-            Some {tile with image; x; y; width; height}
+    let get_tile t id = Int_map.find_opt id t.tiles
+
+    let get_tile_exn t id =
+      get_tile t id >|? fun () ->
+      Util.Error.not_found "tile" (string_of_int id)
 
     module P = (val make_std_props ~class_ ~properties ~useas:`Tile)
 
@@ -769,6 +783,19 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
             (fun id' o -> max id' (Object.id o + 1))
             id (Layer.objects l) )
         0 (layers t)
+
+    let get_layer t id =
+      let rec aux ls =
+        List.find_map
+          (fun l ->
+            if Layer.id l = id then Some l
+            else match Layer.variant l with `Group ls -> aux ls | _ -> None )
+          ls in
+      aux (layers t)
+
+    let get_layer_exn t id =
+      get_layer t id >|? fun () ->
+      Util.Error.not_found "layer" (string_of_int id)
 
     let objects t = List.concat_map Layer.objects (layers t)
     let get_object t id = List.find_opt (fun o -> Object.id o = id) (objects t)

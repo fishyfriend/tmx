@@ -10,9 +10,8 @@
    <frame tileid="2" duration="100"/>
   </animation>
  </tile>
- <tile id="2"/>
  <tile id="3"/>
- <tile id="5"/>
+ <tile id="5" type="abc"/>
  <tile id="4"/>
  <tile id="6">
   <objectgroup draworder="index" id="5">
@@ -28,5 +27,4 @@
    </object>
   </objectgroup>
  </tile>
- <tile id="7"/>
 </tileset>

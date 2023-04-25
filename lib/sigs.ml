@@ -465,6 +465,7 @@ module type Core = sig
     val tiles : t -> Tile.t list
     val max_id : t -> int
     val get_tile : t -> int -> Tile.t option
+    val get_tile_exn : t -> int -> Tile.t
 
     include StdT with type t := t
     include RelocT with type t := t
@@ -576,6 +577,9 @@ module type Core = sig
     val geometry : t -> geometry
     val nextlayerid : t -> int
     val nextobjectid : t -> int
+
+    val get_layer : t -> int -> Layer.t option
+    val get_layer_exn : t -> int -> Layer.t
 
     val objects : t -> Object.t list
     val get_object : t -> int -> Object.t option

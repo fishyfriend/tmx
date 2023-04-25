@@ -3,6 +3,7 @@
  (names
   test_color
   test_context
+  test_conv
   test_data
   test_enum
   test_gid
@@ -11,6 +12,7 @@
  (modules
   test_color
   test_context
+  test_conv
   test_data
   test_enum
   test_gid
