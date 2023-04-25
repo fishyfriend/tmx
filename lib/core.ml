@@ -5,6 +5,8 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
   open Types
   open Getters
 
+  module Int_map = Stdlib.Map.Make (Int)
+
   module Error = Error
 
   type error = Error.t
@@ -275,26 +277,30 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
       type draworder = Draworder.t
 
-      (* TODO: enforce unique object IDs *)
       type t = Types.objectgroup =
-        {draworder : Draworder.t option; objects : Object.t list}
-      [@@deriving eq, ord, show {with_path = false}, make]
+        {draworder : Draworder.t option; objects : Object.t Int_map.t [@opaque]}
+      [@@deriving eq, ord, show {with_path = false}]
+
+      let make ?draworder ?(objects = []) () =
+        let objects =
+          List.fold_left
+            (fun objects o -> Int_map.add (Object.id o) o objects)
+            Int_map.empty objects in
+        {draworder; objects}
 
       let draworder t = t.draworder |? `Topdown
-      let objects t = t.objects
+      let objects t = Int_map.to_seq t.objects |> Seq.map snd |> List.of_seq
 
-      let get_object t id =
-        List.find_opt (fun o -> Object.id o = id) (objects t)
+      let get_object t id = Int_map.find_opt id t.objects
 
       let get_object_exn t id =
         get_object t id >|? fun () -> Util.Error.object_not_found id
 
       let reloc t ~from_ ~to_ =
-        let objects = List.map (Object.reloc ~from_ ~to_) t.objects in
-        {t with objects}
+        {t with objects = Int_map.map (Object.reloc ~from_ ~to_) t.objects}
 
       let map_gids f t =
-        {t with objects = List.map (Object.map_gids f) t.objects}
+        {t with objects = Int_map.map (Object.map_gids f) t.objects}
     end
 
     type objectgroup = Objectgroup.t
@@ -453,8 +459,6 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
   type tile = Tile.t
 
   module Tileset = struct
-    module Int_map = Stdlib.Map.Make (Int)
-
     module Tileoffset = struct
       type t = Types.tileoffset = {x : int option; y : int option}
       [@@deriving eq, ord, show {with_path = false}, make]

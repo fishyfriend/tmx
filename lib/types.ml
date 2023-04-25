@@ -57,7 +57,7 @@ type tilelayer = {width : int; height : int; data : Data.t option}
 
 type draworder = [`Topdown | `Index]
 
-type objectgroup = {draworder : draworder option; objects : object_ list}
+type objectgroup = {draworder : draworder option; objects : object_ Int_map.t}
 
 type imagelayer =
   {image : Image.t option; repeatx : bool option; repeaty : bool option}
