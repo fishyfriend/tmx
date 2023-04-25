@@ -10,7 +10,11 @@
    <frame tileid="2" duration="100"/>
   </animation>
  </tile>
- <tile id="3"/>
+ <tile id="3">
+  <properties>
+   <property name="baz" type="file" value="hello.txt"/>
+  </properties>
+ </tile>
  <tile id="5" type="abc"/>
  <tile id="4"/>
  <tile id="6">
@@ -27,4 +31,7 @@
    </object>
   </objectgroup>
  </tile>
+ <properties>
+  <property name="quux" type="file" value="hello.txt"/>
+ </properties>
 </tileset>

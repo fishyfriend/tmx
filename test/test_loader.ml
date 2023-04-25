@@ -48,16 +48,16 @@ let tsx_c1' = "data/subdir/alt-coll1.tsx"
 let tsx_s1 = "data/single1.tsx"
 let tsx_s1' = "data/subdir/alt-single1.tsx"
 
-let tc_rsc_tilesets =
-  A.test_case "Tilesets for map" `Quick @@ fun () ->
-  A.(check int) "equal" 4 (List.length (tilesets ()))
-
-let tc_rsc_templates =
-  A.test_case "Templates for map" `Quick @@ fun () ->
+let tc_rsc_map =
+  A.test_case "For map" `Quick @@ fun () ->
+  A.(check int) "equal" 4 (List.length (tilesets ())) ;
   A.(check int) "equal" 1 (List.length (templates ()))
 
-let test_resources =
-  ("Load supporting resources", [tc_rsc_tilesets; tc_rsc_templates])
+let tc_rsc_file =
+  A.test_case "For file properties" `Quick @@ fun () ->
+  A.(check string) "equal" "hello world!\n" (get_file_exn "data/hello.txt")
+
+let test_resources = ("Load supporting resources", [tc_rsc_map; tc_rsc_file])
 
 let tc_reloc_map =
   A.test_case "Remap paths in map" `Quick @@ fun () ->
@@ -70,7 +70,9 @@ let tc_reloc_map =
 let tc_reloc_tileset =
   A.test_case "Remap paths in tileset" `Quick @@ fun () ->
   check_tileset_image_file ~ts:tsx_s1 "data/tileset.png" ;
-  check_tileset_image_file ~ts:tsx_s1' "data/tileset.png"
+  check_tileset_image_file ~ts:tsx_s1' "data/tileset.png" ;
+  let ts = get_tileset_exn tsx_s1 in
+  check_property (module Tileset) ts "quux" (`File "data/hello.txt")
 
 let test_reloc = ("Relocate paths", [tc_reloc_map; tc_reloc_tileset])
 
