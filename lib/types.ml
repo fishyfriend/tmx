@@ -63,7 +63,7 @@ type object_ =
     properties : property list;
     shape : shape option }
 
-type tilelayer = {width : int; height : int; data : Data.t option}
+type tilelayer = {width : int; height : int; data : Data.t}
 
 type draworder = [`Topdown | `Index]
 

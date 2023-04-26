@@ -243,10 +243,10 @@ module type Core = sig
     module Tilelayer : sig
       type t
 
-      val make : width:int -> height:int -> ?data:Data.t -> unit -> t
+      val make : width:int -> height:int -> Data.t -> t
       val width : t -> int
       val height : t -> int
-      val data : t -> Data.t option
+      val data : t -> Data.t
 
       val gid_at : col:int -> row:int -> t -> Gid.t
 

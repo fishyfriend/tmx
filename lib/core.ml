@@ -263,7 +263,7 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
   module Layer = struct
     module Tilelayer = struct
       type t = Types.tilelayer =
-        {width : int; height : int; data : Data.t option}
+        {width : int; height : int; data : Data.t [@main]}
       [@@deriving eq, ord, show {with_path = false}, make]
 
       let width t = t.width
@@ -271,33 +271,28 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       let data t = t.data
 
       let gid_at ~col ~row t =
-        (* TODO: make data non-optional. this will disallow empty tile
-           layers *)
         if col >= width t then Util.Error.invalid_arg "col" (string_of_int col) ;
         if row >= height t then
           Util.Error.invalid_arg "row" (string_of_int row) ;
         let i = col + (row * width t) in
-        data t |> Option.get |> Data.bytes
+        data t |> Data.bytes
         |> Fun.flip Bytes.get_int32_ne (i * 4)
         |> Gid.of_int32
 
       let map_gids f t =
         (* TODO: It would be better to modify the data in place; we should
            avoid allocate a whole new map in case the map is huge. *)
-        match t.data with
-        | None -> t
-        | Some data0 ->
-            let bytes0 = Data.bytes data0 in
-            let bytes = Bytes.copy bytes0 in
-            for i = 0 to (Bytes.length bytes / 4) - 1 do
-              let gid0 = Gid.of_int32 (Bytes.get_int32_ne bytes (i * 4)) in
-              let gid = f gid0 in
-              Bytes.set_int32_ne bytes (i * 4) (Gid.to_int32 gid)
-            done ;
-            let encoding = Data.encoding data0 in
-            let compression = Data.compression data0 in
-            let data = Some (Data.make ?encoding ?compression bytes) in
-            {t with data}
+        let bytes0 = Data.bytes t.data in
+        let bytes = Bytes.copy bytes0 in
+        for i = 0 to (Bytes.length bytes / 4) - 1 do
+          let gid0 = Gid.of_int32 (Bytes.get_int32_ne bytes (i * 4)) in
+          let gid = f gid0 in
+          Bytes.set_int32_ne bytes (i * 4) (Gid.to_int32 gid)
+        done ;
+        let encoding = Data.encoding t.data in
+        let compression = Data.compression t.data in
+        let data = Data.make ?encoding ?compression bytes in
+        {t with data}
     end
 
     type tilelayer = Tilelayer.t

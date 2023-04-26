@@ -328,11 +328,13 @@ let tilelayer_of_xml xml =
   let width = attr "width" xml int_of_string in
   let height = attr "height" xml int_of_string in
   let data =
-    child_opt "data" xml @@ fun xml ->
-    match children' "chunk" xml with
-    | [] -> data_of_xml xml
-    | _ -> data_of_xml_chunked ~dims:(width, height) xml in
-  Layer.Tilelayer.make ~width ~height ?data ()
+    match child_opt' "data" xml with
+    | None -> Data.create (width * height * 4)
+    | Some xml ->
+      ( match children' "chunk" xml with
+      | [] -> data_of_xml xml
+      | _ -> data_of_xml_chunked ~dims:(width, height) xml ) in
+  Layer.Tilelayer.make ~width ~height data
 
 let draworder_of_string s =
   match s with
