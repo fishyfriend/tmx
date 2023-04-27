@@ -34,15 +34,6 @@ let get_tileset k t =
     (fun (firstgid, k', ts) -> if k' = k then Some (firstgid, ts) else None)
     t.tilesets
 
-let get_class k t ~useas =
-  String_map.find_opt k t.customtypes >>= fun cts ->
-  List.find_map
-    (fun ct ->
-      match Customtype.variant ct with
-      | `Class c when List.mem useas (Class.useas c) -> Some c
-      | _ -> None )
-    cts
-
 let get_tile gid t =
   let id = Gid.id gid in
   let pair =
@@ -107,39 +98,3 @@ let remove_class k ~useas t =
         | _ -> true )
       cts in
   {t with customtypes = String_map.update k (Option.map filter) t.customtypes}
-
-let make_getters t : (module Sigs.Getters) =
-  ( module struct
-    let get_tileset k = get_tileset k !t |> Option.map snd
-    let get_template k = get_template k !t
-    let get_customtypes k = get_customtypes k !t
-    let get_file k = get_file k !t
-    let get_map k = get_map k !t
-    let get_class k ~useas = get_class k !t ~useas
-    let get_tile gid = get_tile gid !t
-  end )
-
-let map_remap_gid t map gid =
-  if Gid.id gid = 0 then gid
-  else
-    match Map.get_tile_ref map gid with
-    | None -> Util.Error.not_found "gid" (Gid.show gid)
-    | Some (firstgid0, ts, _) ->
-      ( match get_tileset ts t with
-      | None -> Util.Error.not_found "tileset" ts
-      | Some (firstgid, _) -> Gid.rebase ~from_:firstgid0 ~to_:firstgid gid )
-
-let map_remap_gids t map = Remappers.map_map_gids (map_remap_gid t map) map
-
-let template_remap_gid t tem gid =
-  if Gid.id gid = 0 then gid
-  else
-    match Template.tileset tem with
-    | None -> Util.Error.not_found "gid" (Gid.show gid)
-    | Some (firstgid0, ts) ->
-      ( match get_tileset ts t with
-      | None -> Util.Error.not_found "tileset" ts
-      | Some (firstgid, _) -> Gid.rebase ~from_:firstgid0 ~to_:firstgid gid )
-
-let template_remap_gids t tem =
-  Remappers.template_map_gids (template_remap_gid t tem) tem

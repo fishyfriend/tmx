@@ -4,7 +4,6 @@ module Getters = struct
   let get_customtypes _ = []
   let get_map _ = None
   let get_file _ = None
-  let get_class _ ~useas:_ = None
   let get_tile _ = None
 end
 

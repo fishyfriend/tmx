@@ -11,10 +11,8 @@ module type S = Sigs.Loader
 type t = (module S)
 
 let make ~root : t =
+  if Filename.is_relative root then UE.invalid_arg "root" root ;
   ( module struct
-    let () =
-      if Filename.is_relative root then UE.invalid_arg "absolute path" root
-
     let the_context = ref C.default
 
     let protect f x =
@@ -24,17 +22,23 @@ let make ~root : t =
         the_context := old_context ;
         raise exn
 
+    module Getters = struct
+      let get_tileset k = C.get_tileset k !the_context |> Option.map snd
+      let get_template k = C.get_template k !the_context
+      let get_customtypes k = C.get_customtypes k !the_context
+      let get_file k = C.get_file k !the_context
+      let get_map k = C.get_map k !the_context
+      let get_tile gid = C.get_tile gid !the_context
+    end
+
+    include Core.Make (Getters)
+    include Aux
+
     let tilesets () = C.tilesets !the_context
     let templates () = C.templates !the_context
     let files () = C.files !the_context
     let customtypes () = C.customtypes !the_context
     let maps () = C.maps !the_context
-
-    module Getters = (val C.make_getters the_context)
-
-    include Getters
-    include Core.Make (Getters)
-    include Remappers
 
     let not_found n k () = UE.not_found n k
     let get_class_exn k ~useas = get_class k ~useas >|? not_found "class" k
@@ -43,6 +47,31 @@ let make ~root : t =
     let get_template_exn k = get_template k >|? not_found "template" k
     let get_tile_exn gid = get_tile gid >|? not_found "tile" (Gid.show gid)
     let get_tileset_exn k = get_tileset k >|? not_found "tileset" k
+
+    let rebase_gid ~from_firstgid ~to_firstgid gid =
+      let flags = Gid.flags gid in
+      let id = Gid.id gid - from_firstgid + to_firstgid in
+      Gid.make ~flags id
+
+    let remap_gid_to_context ~from_alist gid =
+      let id = Gid.id gid in
+      if id = 0 then gid
+      else
+        match List.find_opt (fun (fstgid, _) -> fstgid <= id) from_alist with
+        | None -> Util.Error.not_found "gid" (Gid.show gid)
+        | Some (from_firstgid, ts) ->
+          ( match C.get_tileset ts !the_context with
+          | None -> Util.Error.not_found "tileset" ts
+          | Some (to_firstgid, _) -> rebase_gid ~from_firstgid ~to_firstgid gid
+          )
+
+    let map_remap_gids m =
+      let from_alist = Map.tilesets m in
+      Aux.map_map_gids (remap_gid_to_context ~from_alist) m
+
+    let template_remap_gids tem =
+      let from_alist = Option.to_list (Template.tileset tem) in
+      Aux.template_map_gids (remap_gid_to_context ~from_alist) tem
 
     let wrap_error fname f x =
       try f x
@@ -78,7 +107,7 @@ let make ~root : t =
       in
       ignore (Template.tileset tem >|= fun (_, ts) -> load_tileset_xml ts) ;
       load_for_object (Template.object_ tem) ;
-      let tem = C.template_remap_gids !the_context tem in
+      let tem = template_remap_gids tem in
       the_context := C.add_template_exn fname tem !the_context ;
       tem
 
@@ -91,7 +120,7 @@ let make ~root : t =
       List.iter (fun (_, ts) -> ignore (load_tileset_xml ts)) (Map.tilesets m) ;
       List.iter load_for_property (Map.properties m) ;
       List.iter load_for_layer (Map.layers m) ;
-      let m = C.map_remap_gids !the_context m in
+      let m = map_remap_gids m in
       the_context := C.add_map_exn fname m !the_context ;
       m
 

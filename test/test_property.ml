@@ -1,19 +1,13 @@
 open Tmx__
 
-let the_context = ref Context.default
+module CG = Core_generic
 
-module Getters = (val Context.make_getters the_context)
+let prop name value = CG.Property.make ~name ~value ()
+let prop' name pt value = CG.Property.make ~name ~propertytype:pt ~value ()
 
-open Core.Make (Getters)
-
-module P = Property
-
-let prop name value = P.make ~name ~value ()
-let prop' name pt value = P.make ~name ~propertytype:pt ~value ()
-
-let class_ name members : Customtype.t =
-  let variant = `Class (Class.make ~useas:[`Property] ~members) in
-  Customtype.make ~id:1 ~name ~variant
+let class_ name members : CG.Customtype.t =
+  let variant = `Class (CG.Class.make ~useas:[`Property] ~members) in
+  CG.Customtype.make ~id:1 ~name ~variant
 
 let customtypes =
   [ class_ "c1"
@@ -29,9 +23,16 @@ let customtypes =
             [ prop "c2p2" (`Float 6.);
               prop "c2p3" (`Class [prop "c1p3" (`Float 543.)]) ] ) ] ]
 
-let () =
-  the_context :=
-    List.fold_right Context.add_customtype_exn customtypes !the_context
+module Getters : Sigs.Getters = struct
+  include Core_generic.Aux
+
+  let get_customtypes k =
+    List.filter (fun ct -> CG.Customtype.name ct = k) customtypes
+end
+
+open Core.Make (Getters)
+
+module P = Property
 
 let check_subprop t k v =
   let t' = P.get_property k t in

@@ -11,8 +11,6 @@ val files : t -> (string * string) list
 val get_tileset : string -> t -> (int * Core_generic.Tileset.t) option
 val get_template : string -> t -> Core_generic.Template.t option
 val get_customtypes : string -> t -> Core_generic.Customtype.t list
-val get_class :
-  string -> t -> useas:Core_generic.Class.Useas.t -> Types.class_ option
 val get_map : string -> t -> Core_generic.Map.t option
 val get_file : string -> t -> string option
 val get_tile : Gid.t -> t -> Core_generic.Tile.t option
@@ -29,8 +27,3 @@ val remove_customtypes : string -> t -> t
 val remove_class : string -> useas:Core_generic.Class.Useas.t -> t -> t
 val remove_file : string -> t -> t
 val remove_map : string -> t -> t
-
-val make_getters : t ref -> (module Sigs.Getters)
-val map_remap_gids : t -> Core_generic.Map.t -> Core_generic.Map.t
-val template_remap_gids :
-  t -> Core_generic.Template.t -> Core_generic.Template.t

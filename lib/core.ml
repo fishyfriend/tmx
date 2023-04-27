@@ -59,6 +59,14 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
   type image = Image.t
 
+  let get_class k ~useas =
+    List.find_map
+      (fun ct ->
+        match ct.variant with
+        | `Class c when List.mem useas c.useas -> Some c
+        | _ -> None )
+      (get_customtypes k)
+
   let get_class_members name ~useas =
     get_class name ~useas >|= fun c -> c.members
 
@@ -834,14 +842,6 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
     let get_object_exn t id =
       get_object t id >|? fun () -> Util.Error.object_not_found id
 
-    let get_tile_ref t gid =
-      let id = Gid.id gid in
-      List.find_map
-        (fun (firstgid, ts) ->
-          if firstgid <= id then Some (firstgid, ts, id - firstgid) else None
-          )
-        t.tilesets
-
     module P = (val make_std_props ~class_ ~properties ~useas:`Tile)
 
     include (P : Props.S with type t := t)
@@ -954,17 +954,16 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
   type customtype = Customtype.t
 
-  module Remappers : Sigs.Remappers = struct
-    let relocate_property = Property.relocate
-    let relocate_object = Object.relocate
-    let relocate_layer = Layer.relocate
-    let relocate_tile = Tile.relocate
+  module Aux : Sigs.Aux = struct
+    include Getters
+
+    let get_class = get_class
+
     let relocate_tileset = Tileset.relocate
     let relocate_map = Map.relocate
     let relocate_template = Template.relocate
     let relocate_customtype = Customtype.relocate
-    let object_map_gids = Object.map_gids
-    let layer_map_gids = Layer.map_gids
+
     let map_map_gids = Map.map_gids
     let template_map_gids = Template.map_gids
   end

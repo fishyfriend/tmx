@@ -28,11 +28,3 @@ let compare t t' =
   match Int.compare (id t) (id t') with
   | 0 -> Flags.compare (flags t) (flags t')
   | x -> x
-
-let rebase ~from_ ~to_ t =
-  let id = id t in
-  if id = 0 then t
-  else
-    let flags = flags t in
-    let id = id - from_ + to_ in
-    make ~flags id

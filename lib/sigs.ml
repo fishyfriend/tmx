@@ -4,29 +4,26 @@ module type Getters = sig
   val get_tileset : string -> Types.tileset option
   val get_template : string -> Types.template option
   val get_customtypes : string -> Types.customtype list
-  val get_class : string -> useas:Types.useas -> Types.class_ option
   val get_map : string -> Types.map option
   val get_file : string -> string option
   val get_tile : Gid.t -> Types.tile option
 end
 
-type 'a map_gids = (Gid.t -> Gid.t) -> 'a -> 'a
-type 'a relocate = from_dir:string -> to_dir:string -> 'a -> 'a
+module type Aux = sig
+  include Getters
 
-module type Remappers = sig
-  val relocate_property : Types.property relocate
-  val relocate_object : Types.object_ relocate
-  val relocate_layer : Types.layer relocate
-  val relocate_tile : Types.tile relocate
-  val relocate_tileset : Types.tileset relocate
-  val relocate_map : Types.map relocate
-  val relocate_template : Types.template relocate
-  val relocate_customtype : Types.customtype relocate
+  val get_class : string -> useas:Types.useas -> Types.class_ option
 
-  val object_map_gids : Types.object_ map_gids
-  val layer_map_gids : Types.layer map_gids
-  val map_map_gids : Types.map map_gids
-  val template_map_gids : Types.template map_gids
+  val relocate_tileset :
+    from_dir:string -> to_dir:string -> Types.tileset -> Types.tileset
+  val relocate_map : from_dir:string -> to_dir:string -> Types.map -> Types.map
+  val relocate_template :
+    from_dir:string -> to_dir:string -> Types.template -> Types.template
+  val relocate_customtype :
+    from_dir:string -> to_dir:string -> Types.customtype -> Types.customtype
+
+  val map_map_gids : (Gid.t -> Gid.t) -> Types.map -> Types.map
+  val template_map_gids : (Gid.t -> Gid.t) -> Types.template -> Types.template
 end
 
 module type ClassT = sig
@@ -616,7 +613,6 @@ module type Core = sig
     val objects : t -> Object.t list
     val get_object : t -> int -> Object.t option
     val get_object_exn : t -> int -> Object.t
-    val get_tile_ref : t -> Gid.t -> (int * string * int) option
 
     include StdT with type t := t
     include ClassPropsT with type t := t and type property := Property.t
@@ -712,7 +708,7 @@ module type Core_generic = sig
        and type Class.t = Types.class_
        and type Customtype.t = Types.customtype
 
-  module Remappers : Remappers
+  module Aux : Aux
 end
 
 module type Loader = sig
