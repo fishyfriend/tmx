@@ -10,18 +10,18 @@ module type Getters = sig
   val get_tile : Gid.t -> Types.tile option
 end
 
-type 'a relocate = from_dir:string -> to_dir:string -> 'a -> 'a
 type 'a map_gids = (Gid.t -> Gid.t) -> 'a -> 'a
+type 'a relocate = from_dir:string -> to_dir:string -> 'a -> 'a
 
 module type Remappers = sig
-  val property_relocate : Types.property relocate
-  val object_relocate : Types.object_ relocate
-  val layer_relocate : Types.layer relocate
-  val tile_relocate : Types.tile relocate
-  val tileset_relocate : Types.tileset relocate
-  val map_relocate : Types.map relocate
-  val template_relocate : Types.template relocate
-  val customtype_relocate : Types.customtype relocate
+  val relocate_property : Types.property relocate
+  val relocate_object : Types.object_ relocate
+  val relocate_layer : Types.layer relocate
+  val relocate_tile : Types.tile relocate
+  val relocate_tileset : Types.tileset relocate
+  val relocate_map : Types.map relocate
+  val relocate_template : Types.template relocate
+  val relocate_customtype : Types.customtype relocate
 
   val object_map_gids : Types.object_ map_gids
   val layer_map_gids : Types.layer map_gids

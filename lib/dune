@@ -19,7 +19,6 @@
   props
   sigs
   sigs0
-  state
   tmx
   types
   util))

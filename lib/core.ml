@@ -279,20 +279,13 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         |> Fun.flip Bytes.get_int32_ne (i * 4)
         |> Gid.of_int32
 
-      let map_gids f t =
-        (* TODO: It would be better to modify the data in place; we should
-           avoid allocate a whole new map in case the map is huge. *)
-        let bytes0 = Data.bytes t.data in
-        let bytes = Bytes.copy bytes0 in
+      let map_gids_inplace f t : unit =
+        let bytes = Data.bytes t.data in
         for i = 0 to (Bytes.length bytes / 4) - 1 do
-          let gid0 = Gid.of_int32 (Bytes.get_int32_ne bytes (i * 4)) in
-          let gid = f gid0 in
-          Bytes.set_int32_ne bytes (i * 4) (Gid.to_int32 gid)
-        done ;
-        let encoding = Data.encoding t.data in
-        let compression = Data.compression t.data in
-        let data = Data.make ?encoding ?compression bytes in
-        {t with data}
+          Bytes.get_int32_ne bytes (i * 4)
+          |> Gid.of_int32 |> f |> Gid.to_int32
+          |> Bytes.set_int32_ne bytes (i * 4)
+        done
     end
 
     type tilelayer = Tilelayer.t
@@ -396,7 +389,9 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     and map_gids_variant f t =
       match t with
-      | `Tilelayer tl -> `Tilelayer (Tilelayer.map_gids f tl)
+      | `Tilelayer tl ->
+          Tilelayer.map_gids_inplace f tl ;
+          `Tilelayer tl
       | `Objectgroup og -> `Objectgroup (Objectgroup.map_gids f og)
       | `Group ls -> `Group (List.map (map_gids f) ls)
       | _ -> t
@@ -960,14 +955,14 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
   type customtype = Customtype.t
 
   module Remappers : Sigs.Remappers = struct
-    let property_relocate = Property.relocate
-    let object_relocate = Object.relocate
-    let layer_relocate = Layer.relocate
-    let tile_relocate = Tile.relocate
-    let tileset_relocate = Tileset.relocate
-    let map_relocate = Map.relocate
-    let template_relocate = Template.relocate
-    let customtype_relocate = Customtype.relocate
+    let relocate_property = Property.relocate
+    let relocate_object = Object.relocate
+    let relocate_layer = Layer.relocate
+    let relocate_tile = Tile.relocate
+    let relocate_tileset = Tileset.relocate
+    let relocate_map = Map.relocate
+    let relocate_template = Template.relocate
+    let relocate_customtype = Customtype.relocate
     let object_map_gids = Object.map_gids
     let layer_map_gids = Layer.map_gids
     let map_map_gids = Map.map_gids
