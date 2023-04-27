@@ -98,13 +98,12 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
       type t = value [@@deriving eq, ord, show {with_path = false}]
     end
 
+    let sort_uniq ts =
+      List.sort_uniq (fun t1 t2 -> String.compare t1.name t2.name) ts
+
     let make ~name ?propertytype ~value () : t =
       let value =
-        match value with
-        | `Class props ->
-            let compare t1 t2 = String.compare t1.name t2.name in
-            `Class (List.sort_uniq compare props)
-        | _ -> value in
+        match value with `Class ts -> `Class (sort_uniq ts) | _ -> value in
       {name; propertytype; value}
 
     let name t = t.name
@@ -206,7 +205,13 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         template : string option;
         properties : Property.t list;
         shape : Shape.t option }
-    [@@deriving eq, ord, show {with_path = false}, make]
+    [@@deriving eq, make, ord, show {with_path = false}]
+
+    let make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible
+        ?template ?properties ?shape () =
+      let properties = properties >|= Property.sort_uniq in
+      make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible ?template
+        ?properties ?shape ()
 
     let id t = t.id |? 0
     let x t = t.x |? 0.
@@ -371,6 +376,12 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
           | `Group of t list ] }
     [@@deriving eq, ord, show {with_path = false}, make]
 
+    let make ?id ?name ?class_ ?opacity ?visible ?tintcolor ?offsetx ?offsety
+        ?parallaxx ?parallaxy ?properties ~variant () =
+      let properties = properties >|= Property.sort_uniq in
+      make ?id ?name ?class_ ?opacity ?visible ?tintcolor ?offsetx ?offsety
+        ?parallaxx ?parallaxy ?properties ~variant ()
+
     type variant =
       [ `Tilelayer of Tilelayer.t
       | `Objectgroup of Objectgroup.t
@@ -466,6 +477,12 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         objectgroup : Object.t list;
         animation : Frame.t list }
     [@@deriving eq, ord, show {with_path = false}, make]
+
+    let make ~id ?class_ ?x ?y ?width ?height ?properties ?image ?objectgroup
+        ?animation () =
+      let properties = properties >|= Property.sort_uniq in
+      make ~id ?class_ ?x ?y ?width ?height ?properties ?image ?objectgroup
+        ?animation ()
 
     let id t = t.id
     let class_ t = t.class_
@@ -589,10 +606,11 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         properties : Property.t list;
         tiles : Tile.t Int_map.t; [@opaque] [@main]
         variant : Variant.t }
-    [@@deriving eq, ord, show {with_path = false}]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let make ~name ?class_ ~columns ?objectalignment ?tilerendersize ?fillmode
-        ?tileoffset ?grid ?(properties = []) ~variant tiles =
+        ?tileoffset ?grid ?properties ~variant tiles =
+      let properties = properties >|= Property.sort_uniq in
       let tiles =
         match variant with
         | `Collection ->
@@ -622,22 +640,13 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
               List.fold_left
                 (fun tiles tile ->
                   let id = Tile.id tile in
-                  if id < tilecount then Int_map.add (Tile.id tile) tile tiles
-                  else tiles )
+                  if id < tilecount then Int_map.add id tile tiles else tiles
+                  )
                 Int_map.empty tiles in
             let id_seq = Seq.init tilecount Fun.id in
             Seq.fold_left ensure_tile tiles id_seq in
-      { name;
-        class_;
-        columns;
-        objectalignment;
-        tilerendersize;
-        fillmode;
-        tileoffset;
-        grid;
-        properties;
-        tiles;
-        variant }
+      make ~name ?class_ ~columns ?objectalignment ?tilerendersize ?fillmode
+        ?tileoffset ?grid ?properties ~variant tiles
 
     let name t = t.name
     let class_ t = t.class_
@@ -741,7 +750,7 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     type geometry = Geometry.t
 
-    (* Invariant : Tilesets in decreasing order of firstgid *)
+    (* Invariant: Tilesets in decreasing order of firstgid *)
     type t = Types.map =
       { version : string;
         tiledversion : string option;
@@ -760,40 +769,27 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
         tilesets : (int * string) list;
         layers : Layer.t list;
         geometry : Geometry.t }
-    [@@deriving eq, ord, show {with_path = false}]
+    [@@deriving eq, ord, show {with_path = false}, make]
 
     let make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel
         ~width ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
-        ?backgroundcolor ?infinite ?(properties = []) ?(tilesets = [])
-        ?(layers = []) ~geometry () =
-      let layers =
-        let cmp l l' = Int.compare (Layer.id l) (Layer.id l') in
-        let layers' = List.sort_uniq cmp layers in
-        if List.compare_lengths layers layers' = 0 then layers'
-        else Util.Error.invalid_arg "layers" "id not unique" in
+        ?backgroundcolor ?infinite ?properties ?(tilesets = []) ?(layers = [])
+        ~geometry () =
+      let properties = properties >|= Property.sort_uniq in
       let tilesets =
         let tilesets' =
           let cmp (gid, _) (gid', _) = -Int.compare gid gid' in
           List.sort_uniq cmp tilesets in
         if List.compare_lengths tilesets tilesets' = 0 then tilesets'
         else Util.Error.invalid_arg "tilesets" "firstgid not unique" in
-      { version;
-        tiledversion;
-        class_;
-        renderorder;
-        compressionlevel;
-        width;
-        height;
-        tilewidth;
-        tileheight;
-        parallaxoriginx;
-        parallaxoriginy;
-        backgroundcolor;
-        infinite;
-        properties;
-        tilesets;
-        layers;
-        geometry }
+      let layers =
+        let cmp l l' = Int.compare (Layer.id l) (Layer.id l') in
+        let layers' = List.sort_uniq cmp layers in
+        if List.compare_lengths layers layers' = 0 then layers'
+        else Util.Error.invalid_arg "layers" "id not unique" in
+      make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
+        ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
+        ?backgroundcolor ?infinite ?properties ~tilesets ~layers ~geometry ()
 
     let version t = t.version
     let tiledversion t = t.tiledversion
@@ -911,7 +907,7 @@ module Make (Getters : Sigs.Getters) : Sigs.Core_generic = struct
 
     let make ~useas ~members =
       if useas = [] then Util.Error.invalid_arg "useas" "[]" ;
-      let members = List.sort_uniq Property.compare members in
+      let members = Property.sort_uniq members in
       {useas; members}
 
     let useas t = t.useas
