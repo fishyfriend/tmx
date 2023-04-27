@@ -1,4 +1,5 @@
 open Tmx__
+open Core.Simple
 
 let to_int32_list t =
   let bytes = Data.bytes t in

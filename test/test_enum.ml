@@ -1,5 +1,5 @@
 open Tmx__
-open Core_generic
+open Core.Simple
 
 let check_int t o v =
   Alcotest.(check (option int)) "equal" o (Enum.read_as_int t v)

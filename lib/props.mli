@@ -1,3 +1,5 @@
+(* Helpers for implementing property lookup *)
+
 module type S = Sigs.PropsT with type property := Types.property
 
 type 'a t = (module S with type t = 'a)

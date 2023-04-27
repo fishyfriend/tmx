@@ -6,7 +6,7 @@ module UE = Util.Error
 
 open Util.Option.Infix
 
-module type S = Sigs.Loader
+include Loader_intf
 
 type t = (module S)
 
@@ -22,7 +22,7 @@ let make ~root : t =
         the_context := old_context ;
         raise exn
 
-    module Getters = struct
+    module Getters : Core.Getters = struct
       let get_tileset k = C.get_tileset k !the_context |> Option.map snd
       let get_template k = C.get_template k !the_context
       let get_customtypes k = C.get_customtypes k !the_context
@@ -31,8 +31,9 @@ let make ~root : t =
       let get_tile gid = C.get_tile gid !the_context
     end
 
+    module Aux = Core.Aux
+
     include Core.Make (Getters)
-    include Aux
 
     let tilesets () = C.tilesets !the_context
     let templates () = C.templates !the_context
@@ -92,7 +93,8 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let ts =
         Conv_xml.(with_xml_from_channel ic tileset_of_xml)
-        |> relocate_tileset ~from_dir:(Filename.dirname fname) ~to_dir:"" in
+        |> Aux.reloc_tileset ~from_dir:(Filename.dirname fname) ~to_dir:""
+      in
       List.iter load_for_property (Tileset.properties ts) ;
       List.iter load_for_tile (Tileset.tiles ts) ;
       the_context := C.add_tileset_exn fname ts !the_context ;
@@ -103,7 +105,7 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let tem =
         Conv_xml.(with_xml_from_channel ic template_of_xml)
-        |> relocate_template ~from_dir:(Filename.dirname fname) ~to_dir:""
+        |> Aux.reloc_template ~from_dir:(Filename.dirname fname) ~to_dir:""
       in
       ignore (Template.tileset tem >|= fun (_, ts) -> load_tileset_xml ts) ;
       load_for_object (Template.object_ tem) ;
@@ -116,7 +118,7 @@ let make ~root : t =
       with_file fname @@ fun ic ->
       let m =
         Conv_xml.(with_xml_from_channel ic map_of_xml)
-        |> relocate_map ~from_dir:(Filename.dirname fname) ~to_dir:"" in
+        |> Aux.reloc_map ~from_dir:(Filename.dirname fname) ~to_dir:"" in
       List.iter (fun (_, ts) -> ignore (load_tileset_xml ts)) (Map.tilesets m) ;
       List.iter load_for_property (Map.properties m) ;
       List.iter load_for_layer (Map.layers m) ;
@@ -129,8 +131,8 @@ let make ~root : t =
       let cts =
         Conv_json.(with_json_from_channel ic customtypes_of_json)
         |> List.map
-             (relocate_customtype ~from_dir:(Filename.dirname fname) ~to_dir:"")
-      in
+             (Aux.reloc_customtype ~from_dir:(Filename.dirname fname)
+                ~to_dir:"" ) in
       List.iter load_for_customtype cts ;
       List.iter
         (fun ct -> the_context := C.add_customtype_exn ct !the_context)

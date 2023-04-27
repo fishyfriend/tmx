@@ -1,30 +1,28 @@
 module Int_map = Map.Make (Int)
 
-type format = [`Bmp | `Gif | `Jpg | `Png]
+type property =
+  { name : string;
+    propertytype : string option;
+    value :
+      [ `String of string
+      | `Int of int
+      | `Float of float
+      | `Bool of bool
+      | `Color of Color.t
+      | `File of string
+      | `Object of int
+      | `Class of property list ] }
 
-type source = [`File of string | `Embed of format * Data.t]
+type data =
+  { encoding : [`Base64 | `Csv] option;
+    compression : [`Gzip | `Zlib | `Zstd] option;
+    bytes : bytes }
 
 type image =
-  { source : source;
+  { source : [`File of string | `Embed of [`Bmp | `Gif | `Jpg | `Png] * data];
     trans : Color.t option;
     width : int option;
     height : int option }
-
-type property = {name : string; propertytype : string option; value : value}
-
-and value =
-  [ `String of string
-  | `Int of int
-  | `Float of float
-  | `Bool of bool
-  | `Color of Color.t
-  | `File of string
-  | `Object of int
-  | `Class of property list ]
-
-type halign = [`Center | `Right | `Justify | `Left]
-
-type valign = [`Center | `Bottom | `Top]
 
 type text =
   { text : string;
@@ -37,17 +35,8 @@ type text =
     underline : bool option;
     strikeout : bool option;
     kerning : bool option;
-    halign : halign option;
-    valign : valign option }
-
-type shape =
-  [ `Rectangle
-  | `Ellipse
-  | `Point
-  | `Polygon of (float * float) list
-  | `Polyline of (float * float) list
-  | `Text of text
-  | `Tile of Gid.t ]
+    halign : [`Center | `Right | `Justify | `Left] option;
+    valign : [`Center | `Bottom | `Top] option }
 
 type object_ =
   { id : int option;
@@ -61,13 +50,20 @@ type object_ =
     visible : bool option;
     template : string option;
     properties : property list;
-    shape : shape option }
+    shape :
+      [ `Rectangle
+      | `Ellipse
+      | `Point
+      | `Polygon of (float * float) list
+      | `Polyline of (float * float) list
+      | `Text of text
+      | `Tile of Gid.t ]
+      option }
 
-type tilelayer = {width : int; height : int; data : Data.t}
+type tilelayer = {width : int; height : int; data : data}
 
-type draworder = [`Topdown | `Index]
-
-type objectgroup = {draworder : draworder option; objects : object_ Int_map.t}
+type objectgroup =
+  {draworder : [`Topdown | `Index] option; objects : object_ Int_map.t}
 
 type imagelayer =
   {image : image option; repeatx : bool option; repeaty : bool option}
@@ -90,12 +86,6 @@ type layer =
       | `Imagelayer of imagelayer
       | `Group of layer list ] }
 
-type layer_variant =
-  [ `Tilelayer of tilelayer
-  | `Objectgroup of objectgroup
-  | `Imagelayer of imagelayer
-  | `Group of layer list ]
-
 type frame = {tileid : int; duration : int}
 
 type tile =
@@ -110,8 +100,6 @@ type tile =
     objectgroup : object_ list;
     animation : frame list }
 
-type 'a int_map = 'a Stdlib.Map.Make(Int).t
-
 type tileoffset = {x : int option; y : int option}
 
 type single =
@@ -122,49 +110,34 @@ type single =
     margin : int option;
     image : image }
 
-type objectalignment =
-  [ `Unspecified
-  | `Topleft
-  | `Top
-  | `Topright
-  | `Left
-  | `Center
-  | `Right
-  | `Bottomleft
-  | `Bottom
-  | `Bottomright ]
-
-type tilerendersize = [`Tile | `Grid]
-
-type fillmode = [`Stretch | `Preserve_aspect_fit]
-
-type grid = [`Orthogonal | `Isometric of int * int]
-
-type tileset_variant = [`Single of single | `Collection]
-
 type tileset =
   { name : string;
     class_ : string option;
     columns : int;
-    objectalignment : objectalignment option;
-    tilerendersize : tilerendersize option;
-    fillmode : fillmode option;
+    objectalignment :
+      [ `Unspecified
+      | `Topleft
+      | `Top
+      | `Topright
+      | `Left
+      | `Center
+      | `Right
+      | `Bottomleft
+      | `Bottom
+      | `Bottomright ]
+      option;
+    tilerendersize : [`Tile | `Grid] option;
+    fillmode : [`Stretch | `Preserve_aspect_fit] option;
     tileoffset : tileoffset option;
-    grid : grid option;
+    grid : [`Orthogonal | `Isometric of int * int] option;
     properties : property list;
     tiles : tile Int_map.t;
-    variant : tileset_variant }
+    variant : [`Single of single | `Collection] }
 
-type staggeraxis = [`X | `Y]
-
-type staggerindex = [`Even | `Odd]
-
-type staggered = {staggeraxis : staggeraxis; staggerindex : staggerindex}
+type staggered = {staggeraxis : [`X | `Y]; staggerindex : [`Even | `Odd]}
 
 type hexagonal =
-  {hexsidelength : int; staggeraxis : staggeraxis; staggerindex : staggerindex}
-
-type renderorder = [`Right_down | `Right_up | `Left_down | `Left_up]
+  {hexsidelength : int; staggeraxis : [`X | `Y]; staggerindex : [`Even | `Odd]}
 
 type geometry =
   [`Orthogonal | `Isometric | `Staggered of staggered | `Hexagonal of hexagonal]
@@ -173,7 +146,7 @@ type map =
   { version : string;
     tiledversion : string option;
     class_ : string option;
-    renderorder : renderorder option;
+    renderorder : [`Right_down | `Right_up | `Left_down | `Left_up] option;
     compressionlevel : int option;
     width : int;
     height : int;
@@ -202,8 +175,8 @@ type useas =
 
 type class_ = {useas : useas list; members : property list}
 
-type storagetype = [`Int | `String]
+type enum =
+  {storagetype : [`Int | `String]; valuesasflags : bool; values : string array}
 
-type customtype_variant = [`Class of class_ | `Enum of Enum.t]
-
-type customtype = {id : int; name : string; variant : customtype_variant}
+type customtype =
+  {id : int; name : string; variant : [`Class of class_ | `Enum of enum]}

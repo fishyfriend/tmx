@@ -1,7 +1,8 @@
 (* TODO: find a better way to expose internal modules to tests *)
 open Tmx__
-open Core_generic
+open Core.Simple
 
+module A = Alcotest
 module C = Context
 
 let test_dup_ct =
@@ -20,7 +21,7 @@ let test_dup_ct =
   let dup_ct name = Error.Error (`Duplicate ("customtype", name)) in
 
   let tc_dup_ct_allow =
-    Alcotest.test_case "Allow non-conflicting dups" `Quick @@ fun () ->
+    A.test_case "Allow non-conflicting dups" `Quick @@ fun () ->
     let t =
       C.default |> add_class 1 [`Object; `Tile] |> add_class 2 [`Property]
     in
@@ -29,16 +30,16 @@ let test_dup_ct =
     ignore @@ add_class 2 [`Object; `Tile] t in
 
   let tc_dup_ct_disallow =
-    Alcotest.test_case "Disallow conflicting dups" `Quick @@ fun () ->
+    A.test_case "Disallow conflicting dups" `Quick @@ fun () ->
     let t =
       C.default |> add_class 1 [`Object; `Tile] |> add_class 2 [`Property]
     in
-    Alcotest.check_raises "raises" (dup_ct "1") (fun () ->
+    A.check_raises "raises" (dup_ct "1") (fun () ->
         ignore @@ add_class 1 [`Object] t ) ;
-    Alcotest.check_raises "raises" (dup_ct "2") (fun () ->
+    A.check_raises "raises" (dup_ct "2") (fun () ->
         ignore @@ add_class 2 [`Property] t ) ;
-    Alcotest.check_raises "raises" (dup_ct "2") (fun () ->
-        ignore @@ add_enum 2 t ) in
+    A.check_raises "raises" (dup_ct "2") (fun () -> ignore @@ add_enum 2 t)
+  in
 
   ("Dup customtypes", [tc_dup_ct_allow; tc_dup_ct_disallow])
 
@@ -65,18 +66,18 @@ let test_tile =
     |> C.add_map_exn "m" m in
 
   let tc_invariant =
-    Alcotest.test_case "Tilesets sort by GID desc." `Quick @@ fun () ->
+    A.test_case "Tilesets sort by GID desc." `Quick @@ fun () ->
     let tss_exp = [(5, "ts2", ts2); (1, "ts1", ts1)] in
-    Alcotest.(check (list (triple int string (module Tileset))))
+    A.(check (list (triple int string (module Tileset))))
       "equal" tss_exp (C.tilesets t) in
 
   let check_get_tile id tile_exp =
     let gid = Gid.make id in
     let tile = C.get_tile gid t in
-    Alcotest.(check (option (module Tile))) "equal" tile_exp tile in
+    A.(check (option (module Tile))) "equal" tile_exp tile in
 
   let tc_valid =
-    Alcotest.test_case "Find valid tiles" `Quick @@ fun () ->
+    A.test_case "Find valid tiles" `Quick @@ fun () ->
     check_get_tile 1 (Tileset.get_tile ts1 0) ;
     check_get_tile 2 (Tileset.get_tile ts1 1) ;
     check_get_tile 4 (Tileset.get_tile ts1 3) ;
@@ -84,7 +85,7 @@ let test_tile =
     check_get_tile 6 (Tileset.get_tile ts2 1) in
 
   let tc_invalid =
-    Alcotest.test_case "Don't find invalid tiles" `Quick @@ fun () ->
+    A.test_case "Don't find invalid tiles" `Quick @@ fun () ->
     check_get_tile 0 None ;
     check_get_tile 3 None ;
     check_get_tile 7 None ;
@@ -92,4 +93,4 @@ let test_tile =
 
   ("Tile lookup", [tc_invariant; tc_valid; tc_invalid])
 
-let () = Alcotest.run "Context" [test_dup_ct; test_tile]
+let () = A.run "Context" [test_dup_ct; test_tile]

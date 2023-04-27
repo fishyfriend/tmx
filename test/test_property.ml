@@ -1,13 +1,15 @@
 open Tmx__
 
-module CG = Core_generic
+include struct
+  open Core.Simple
 
-let prop name value = CG.Property.make ~name ~value ()
-let prop' name pt value = CG.Property.make ~name ~propertytype:pt ~value ()
+  let prop name value = Property.make ~name ~value ()
+  let prop' name pt value = Property.make ~name ~propertytype:pt ~value ()
 
-let class_ name members : CG.Customtype.t =
-  let variant = `Class (CG.Class.make ~useas:[`Property] ~members) in
-  CG.Customtype.make ~id:1 ~name ~variant
+  let class_ name members : Customtype.t =
+    let variant = `Class (Class.make ~useas:[`Property] ~members) in
+    Customtype.make ~id:1 ~name ~variant
+end
 
 let customtypes =
   [ class_ "c1"
@@ -23,11 +25,11 @@ let customtypes =
             [ prop "c2p2" (`Float 6.);
               prop "c2p3" (`Class [prop "c1p3" (`Float 543.)]) ] ) ] ]
 
-module Getters : Sigs.Getters = struct
-  include Core_generic.Aux
+module Getters : Core.Getters = struct
+  include Core.Simple
 
   let get_customtypes k =
-    List.filter (fun ct -> CG.Customtype.name ct = k) customtypes
+    List.filter (fun ct -> Customtype.name ct = k) customtypes
 end
 
 open Core.Make (Getters)

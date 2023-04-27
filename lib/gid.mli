@@ -1,5 +1,5 @@
 module Flags : sig
-  include Sigs0.StdT
+  include Sigs.StdT
 
   val ( + ) : t -> t -> t
   val test : t -> t -> bool
@@ -12,7 +12,7 @@ module Flags : sig
   val empty : t
 end
 
-include Sigs0.StdT
+type t
 
 val make : ?flags:Flags.t -> int -> t
 val id : t -> int
@@ -20,3 +20,5 @@ val flags : t -> Flags.t
 val of_int32 : int32 -> t
 val to_int32 : t -> int32
 val max_id : int
+
+include Sigs.StdT with type t := t

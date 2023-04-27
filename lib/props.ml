@@ -1,9 +1,7 @@
-(* Helpers for implementing property lookup *)
-
 open Util.Option.Infix
 open Types
 
-module type S = Sigs.PropsT with type property := Types.property
+module type S = Sigs.PropsT with type property := property
 
 type 'a t = (module S with type t = 'a)
 

@@ -10,15 +10,13 @@
   conv_json
   conv_xml
   core
-  core_generic
-  data
-  enum
+  core_intf
   error
   gid
   loader
+  loader_intf
   props
   sigs
-  sigs0
   tmx
   types
   util))

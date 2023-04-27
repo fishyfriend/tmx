@@ -1,4 +1,4 @@
-open Core_generic
+open Core.Simple
 open Util.Option.Infix
 
 module String_map = Stdlib.Map.Make (String)

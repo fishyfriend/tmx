@@ -1,6 +1,6 @@
 module J = Ezjsonm
 
-open Core_generic
+open Core.Simple
 open Util.Option.Infix
 
 type json = Ezjsonm.value

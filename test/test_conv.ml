@@ -1,7 +1,7 @@
 module A = Alcotest
 
 open Tmx__
-open Core_generic
+open Core.Simple
 
 let with_xml_from_file fname f =
   In_channel.with_open_text fname @@ fun ic ->
