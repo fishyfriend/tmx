@@ -235,58 +235,103 @@ module type S = sig
 
   type object_ = Object.t
 
-  module Layer : sig
+  module Tile : sig
+    module Frame : sig
+      type t
+
+      val make : tileid:int -> duration:int -> t
+      val tileid : t -> int
+      val duration : t -> int
+
+      include Sigs.StdT with type t := t
+    end
+
+    type frame = Frame.t
+
     type t
 
-    module Tilelayer : sig
-      type t
+    val make :
+      id:int ->
+      ?class_:string ->
+      ?x:int ->
+      ?y:int ->
+      ?width:int ->
+      ?height:int ->
+      ?properties:Property.t list ->
+      ?image:Image.t ->
+      ?objectgroup:Object.t list ->
+      ?animation:frame list ->
+      unit ->
+      t
 
-      val make : width:int -> height:int -> Data.t -> t
-      val width : t -> int
-      val height : t -> int
-      val data : t -> Data.t
+    val id : t -> int
+    val x : t -> int
+    val y : t -> int
+    val width : t -> int option
+    val height : t -> int option
+    val image : t -> Image.t option
+    val objectgroup : t -> Object.t list
+    val animation : t -> Frame.t list
 
-      val gid_at : col:int -> row:int -> t -> Gid.t
+    include Sigs.StdT with type t := t
+    include Sigs.ClassPropsT with type t := t and type property := Property.t
+  end
+
+  type tile = Tile.t
+
+  module Tilelayer : sig
+    type t
+
+    val make : width:int -> height:int -> Data.t -> t
+    val width : t -> int
+    val height : t -> int
+    val data : t -> Data.t
+
+    val gid_at : col:int -> row:int -> t -> Gid.t
+    val tile_at : col:int -> row:int -> t -> Tile.t option
+
+    include Sigs.StdT with type t := t
+  end
+
+  type tilelayer = Tilelayer.t
+
+  module Objectgroup : sig
+    module Draworder : sig
+      type t = [`Topdown | `Index]
 
       include Sigs.StdT with type t := t
     end
 
-    type tilelayer = Tilelayer.t
+    type draworder = Draworder.t
 
-    module Objectgroup : sig
-      module Draworder : sig
-        type t = [`Topdown | `Index]
+    type t
 
-        include Sigs.StdT with type t := t
-      end
+    val make : ?draworder:draworder -> ?objects:Object.t list -> unit -> t
+    val draworder : t -> draworder
+    val objects : t -> Object.t list
+    val get_object : t -> int -> Object.t option
+    val get_object_exn : t -> int -> Object.t
 
-      type draworder = Draworder.t
+    include Sigs.StdT with type t := t
+  end
 
-      type t
+  type objectgroup = Objectgroup.t
 
-      val make : ?draworder:draworder -> ?objects:Object.t list -> unit -> t
-      val draworder : t -> draworder
-      val objects : t -> Object.t list
-      val get_object : t -> int -> Object.t option
-      val get_object_exn : t -> int -> Object.t
+  module Imagelayer : sig
+    type t
 
-      include Sigs.StdT with type t := t
-    end
+    val make : ?image:Image.t -> ?repeatx:bool -> ?repeaty:bool -> unit -> t
+    val image : t -> Image.t option
+    val repeatx : t -> bool
+    val repeaty : t -> bool
 
-    type objectgroup = Objectgroup.t
+    include Sigs.StdT with type t := t
+  end
 
-    module Imagelayer : sig
-      type t
+  type imagelayer = Imagelayer.t
 
-      val make : ?image:Image.t -> ?repeatx:bool -> ?repeaty:bool -> unit -> t
-      val image : t -> Image.t option
-      val repeatx : t -> bool
-      val repeaty : t -> bool
-
-      include Sigs.StdT with type t := t
-    end
-
-    type imagelayer = Imagelayer.t
+  module Layer : sig
+    type t
 
     module Variant : sig
       type layer := t
@@ -338,50 +383,6 @@ module type S = sig
   end
 
   type layer = Layer.t
-
-  module Tile : sig
-    module Frame : sig
-      type t
-
-      val make : tileid:int -> duration:int -> t
-      val tileid : t -> int
-      val duration : t -> int
-
-      include Sigs.StdT with type t := t
-    end
-
-    type frame = Frame.t
-
-    type t
-
-    val make :
-      id:int ->
-      ?class_:string ->
-      ?x:int ->
-      ?y:int ->
-      ?width:int ->
-      ?height:int ->
-      ?properties:Property.t list ->
-      ?image:Image.t ->
-      ?objectgroup:Object.t list ->
-      ?animation:frame list ->
-      unit ->
-      t
-
-    val id : t -> int
-    val x : t -> int
-    val y : t -> int
-    val width : t -> int option
-    val height : t -> int option
-    val image : t -> Image.t option
-    val objectgroup : t -> Object.t list
-    val animation : t -> Frame.t list
-
-    include Sigs.StdT with type t := t
-    include Sigs.ClassPropsT with type t := t and type property := Property.t
-  end
-
-  type tile = Tile.t
 
   module Tileset : sig
     module Tileoffset : sig
@@ -724,9 +725,9 @@ module type S_generic =
      and type Image.t = Types.image
      and type Object.Text.t = Types.text
      and type Object.t = Types.object_
-     and type Layer.Tilelayer.t = Types.tilelayer
-     and type Layer.Objectgroup.t = Types.objectgroup
-     and type Layer.Imagelayer.t = Types.imagelayer
+     and type Tilelayer.t = Types.tilelayer
+     and type Objectgroup.t = Types.objectgroup
+     and type Imagelayer.t = Types.imagelayer
      and type Layer.t = Types.layer
      and type Tile.Frame.t = Types.frame
      and type Tile.t = Types.tile

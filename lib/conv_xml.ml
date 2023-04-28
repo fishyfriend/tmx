@@ -152,6 +152,7 @@ let object_of_xml xml =
   let template = attr_opt' "template" xml in
   let properties = child_opt "properties" xml properties_of_xml in
   let shape = shape_of_xml xml in
+  (* TODO: a parse error raised here does not receive proper relocation *)
   Object.make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible
     ?template ?properties ?shape ()
 
@@ -334,7 +335,7 @@ let tilelayer_of_xml xml =
       ( match children' "chunk" xml with
       | [] -> data_of_xml xml
       | _ -> data_of_xml_chunked ~dims:(width, height) xml ) in
-  Layer.Tilelayer.make ~width ~height data
+  Tilelayer.make ~width ~height data
 
 let draworder_of_string s =
   match s with
@@ -345,13 +346,13 @@ let draworder_of_string s =
 let objectgroup_of_xml xml =
   let draworder = attr_opt "draworder" xml draworder_of_string in
   let objects = children "object" xml object_of_xml in
-  Layer.Objectgroup.make ?draworder ~objects ()
+  Objectgroup.make ?draworder ~objects ()
 
 let imagelayer_of_xml xml =
   let image = child_opt "image" xml image_of_xml in
   let repeatx = attr_opt "repeatx" xml bool_of_string01 in
   let repeaty = attr_opt "repeaty" xml bool_of_string01 in
-  Layer.Imagelayer.make ?image ?repeatx ?repeaty ()
+  Imagelayer.make ?image ?repeatx ?repeaty ()
 
 let layer_type_of_string s =
   match s with

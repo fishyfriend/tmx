@@ -8,8 +8,11 @@ include Loader_intf
 type t = (module S)
 
 let make ?(load_file_props = true) ~root () : t =
-  if Filename.is_relative root then UE.invalid_arg "root" root ;
   ( module struct
+    let root =
+      if Filename.is_relative root then Filename.concat (Sys.getcwd ()) root
+      else root
+
     let context = ref C.default
 
     let protect f x =

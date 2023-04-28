@@ -360,87 +360,89 @@ module Make (Getters : Getters) = struct
 
   type object_ = Object.t
 
-  module Layer = struct
-    module Tilelayer = struct
-      type t = tilelayer = {width : int; height : int; data : Data.t [@main]}
-      [@@deriving eq, ord, show {with_path = false}, make]
+  module Tilelayer = struct
+    type t = tilelayer = {width : int; height : int; data : Data.t [@main]}
+    [@@deriving eq, ord, show {with_path = false}, make]
 
-      let width t = t.width
-      let height t = t.height
-      let data t = t.data
+    let width t = t.width
+    let height t = t.height
+    let data t = t.data
 
-      let gid_at ~col ~row t =
-        if col >= width t then Util.Error.invalid_arg "col" (string_of_int col) ;
-        if row >= height t then
-          Util.Error.invalid_arg "row" (string_of_int row) ;
-        let i = col + (row * width t) in
-        data t |> Data.bytes
-        |> Fun.flip Bytes.get_int32_ne (i * 4)
-        |> Gid.of_int32
+    let gid_at ~col ~row t =
+      if col >= width t then Util.Error.invalid_arg "col" (string_of_int col) ;
+      if row >= height t then Util.Error.invalid_arg "row" (string_of_int row) ;
+      let i = col + (row * width t) in
+      data t |> Data.bytes
+      |> Fun.flip Bytes.get_int32_ne (i * 4)
+      |> Gid.of_int32
 
-      let map_gids_inplace f t : unit =
-        let bytes = Data.bytes t.data in
-        for i = 0 to (Bytes.length bytes / 4) - 1 do
-          Bytes.get_int32_ne bytes (i * 4)
-          |> Gid.of_int32 |> f |> Gid.to_int32
-          |> Bytes.set_int32_ne bytes (i * 4)
-        done
-    end
+    let tile_at ~col ~row t =
+      let gid = gid_at ~col ~row t in
+      if Gid.id gid = 0 then None else get_tile gid
 
-    type tilelayer = Tilelayer.t
+    let map_gids_inplace f t : unit =
+      let bytes = Data.bytes t.data in
+      for i = 0 to (Bytes.length bytes / 4) - 1 do
+        Bytes.get_int32_ne bytes (i * 4)
+        |> Gid.of_int32 |> f |> Gid.to_int32
+        |> Bytes.set_int32_ne bytes (i * 4)
+      done
+  end
 
-    module Objectgroup = struct
-      module Draworder = struct
-        type t = [`Topdown | `Index]
-        [@@deriving eq, ord, show {with_path = false}]
-      end
+  type tilelayer = Tilelayer.t
 
-      type draworder = Draworder.t
-
-      type t = objectgroup =
-        {draworder : Draworder.t option; objects : Object.t Int_map.t [@opaque]}
+  module Objectgroup = struct
+    module Draworder = struct
+      type t = [`Topdown | `Index]
       [@@deriving eq, ord, show {with_path = false}]
-
-      let make ?draworder ?(objects = []) () =
-        let objects =
-          List.fold_left
-            (fun objects o -> Int_map.add (Object.id o) o objects)
-            Int_map.empty objects in
-        {draworder; objects}
-
-      let draworder t = t.draworder |? `Topdown
-      let objects t = Int_map.to_seq t.objects |> Seq.map snd |> List.of_seq
-
-      let get_object t id = Int_map.find_opt id t.objects
-
-      let get_object_exn t id =
-        get_object t id >|? fun () -> Util.Error.object_not_found id
-
-      let reloc ~from_dir ~to_dir t =
-        { t with
-          objects = Int_map.map (Object.reloc ~from_dir ~to_dir) t.objects }
-
-      let map_gids f t =
-        {t with objects = Int_map.map (Object.map_gids f) t.objects}
     end
 
-    type objectgroup = Objectgroup.t
+    type draworder = Draworder.t
 
-    module Imagelayer = struct
-      type t = imagelayer =
-        {image : Image.t option; repeatx : bool option; repeaty : bool option}
-      [@@deriving eq, ord, show {with_path = false}, make]
+    type t = objectgroup =
+      {draworder : Draworder.t option; objects : Object.t Int_map.t [@opaque]}
+    [@@deriving eq, ord, show {with_path = false}]
 
-      let image t = t.image
-      let repeatx t = t.repeatx |? false
-      let repeaty t = t.repeaty |? false
+    let make ?draworder ?(objects = []) () =
+      let objects =
+        List.fold_left
+          (fun objects o -> Int_map.add (Object.id o) o objects)
+          Int_map.empty objects in
+      {draworder; objects}
 
-      let reloc ~from_dir ~to_dir t =
-        {t with image = t.image >|= Image.reloc ~from_dir ~to_dir}
-    end
+    let draworder t = t.draworder |? `Topdown
+    let objects t = Int_map.to_seq t.objects |> Seq.map snd |> List.of_seq
 
-    type imagelayer = Imagelayer.t
+    let get_object t id = Int_map.find_opt id t.objects
 
+    let get_object_exn t id =
+      get_object t id >|? fun () -> Util.Error.object_not_found id
+
+    let reloc ~from_dir ~to_dir t =
+      {t with objects = Int_map.map (Object.reloc ~from_dir ~to_dir) t.objects}
+
+    let map_gids f t =
+      {t with objects = Int_map.map (Object.map_gids f) t.objects}
+  end
+
+  type objectgroup = Objectgroup.t
+
+  module Imagelayer = struct
+    type t = imagelayer =
+      {image : Image.t option; repeatx : bool option; repeaty : bool option}
+    [@@deriving eq, ord, show {with_path = false}, make]
+
+    let image t = t.image
+    let repeatx t = t.repeatx |? false
+    let repeaty t = t.repeaty |? false
+
+    let reloc ~from_dir ~to_dir t =
+      {t with image = t.image >|= Image.reloc ~from_dir ~to_dir}
+  end
+
+  type imagelayer = Imagelayer.t
+
+  module Layer = struct
     type t = layer =
       { id : int option;
         name : string option;

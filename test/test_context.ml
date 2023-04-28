@@ -53,7 +53,7 @@ let test_tile =
     Array.init 8 @@ fun id -> Object.make ~id ~shape:(`Tile (Gid.make id)) ()
   in
   let m =
-    let og = Layer.Objectgroup.make ~objects:(Array.to_list objects) () in
+    let og = Objectgroup.make ~objects:(Array.to_list objects) () in
     let l = Layer.make ~variant:(`Objectgroup og) () in
     Map.make ~version:"0.0" ~width:1 ~height:1 ~tilewidth:16 ~tileheight:16
       ~tilesets:[(1, "ts1"); (20, "ts2")]

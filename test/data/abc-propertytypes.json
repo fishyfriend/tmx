@@ -1,0 +1,19 @@
+[
+    {
+        "color": "#ffa0a0a4",
+        "drawFill": true,
+        "id": 1,
+        "members": [
+            {
+                "name": "favcol",
+                "type": "color",
+                "value": "#ff64c832"
+            }
+        ],
+        "name": "abc",
+        "type": "class",
+        "useAs": [
+            "object"
+        ]
+    }
+]

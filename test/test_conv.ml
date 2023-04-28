@@ -29,12 +29,12 @@ let tc_map_tilelayer =
   A.test_case "Sanity check tilelayer" `Quick @@ fun () ->
   let l = Map.get_layer_exn m_fixed1 1 in
   let tl = match Layer.variant l with `Tilelayer x -> x | _ -> assert false in
-  A.(check int) "equal" 24 (Layer.Tilelayer.width tl) ;
-  A.(check int) "equal" 16 (Layer.Tilelayer.height tl) ;
+  A.(check int) "equal" 24 (Tilelayer.width tl) ;
+  A.(check int) "equal" 16 (Tilelayer.height tl) ;
   for col = 0 to 15 do
     A.(check int)
       "equal" (col mod 8)
-      (Gid.id (Layer.Tilelayer.gid_at ~col ~row:8 tl))
+      (Gid.id (Tilelayer.gid_at ~col ~row:8 tl))
   done
 
 let tc_map_objectgroup =

@@ -19,12 +19,12 @@ let check_object_tile ~m ~o ~ts ~tile =
   A.(check (module Tile)) "equal" tile_exp tile
 
 let check_gid_at ~tl ~col ~row gid =
-  A.check (module Gid) "equal" gid (Layer.Tilelayer.gid_at ~col ~row tl)
+  A.check (module Gid) "equal" gid (Tilelayer.gid_at ~col ~row tl)
 
 let check_tile_at ~tl ~col ~row ~ts ~tile =
   let ts = get_tileset_exn ts in
   let tile_exp = Tileset.get_tile_exn ts tile in
-  let gid = Layer.Tilelayer.gid_at ~col ~row tl in
+  let gid = Tilelayer.gid_at ~col ~row tl in
   let tile = get_tile_exn gid in
   A.check (module Tile) "equal" tile_exp tile
 
