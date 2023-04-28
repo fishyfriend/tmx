@@ -1,7 +1,7 @@
 module type S = sig
   include Core.S
 
-  val tilesets : unit -> (int * string * Tileset.t) list
+  val tilesets : unit -> (string * Tileset.t) list
   val templates : unit -> (string * Template.t) list
   val files : unit -> (string * string) list
   val customtypes : unit -> Customtype.t list
@@ -47,8 +47,7 @@ type t = (module S)
 module type Intf = sig
   module type S = S
 
-  type loader := t
-  type t = loader
+  type t = (module S)
 
   val make : root:string -> t
 end

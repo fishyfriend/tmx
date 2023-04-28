@@ -1,6 +1,3 @@
-(* TODO: allow to fail gracefully when unable to autoload a resource file. make
-   this behavior configurable. *)
-
 module C = Context
 module UE = Util.Error
 
@@ -13,33 +10,34 @@ type t = (module S)
 let make ~root : t =
   if Filename.is_relative root then UE.invalid_arg "root" root ;
   ( module struct
-    let the_context = ref C.default
+    let context = ref C.default
 
     let protect f x =
-      let old_context = !the_context in
+      let old_context = !context in
       try f x
       with exn ->
-        the_context := old_context ;
+        context := old_context ;
         raise exn
 
     module Getters : Core.Getters = struct
-      let get_tileset k = C.get_tileset k !the_context |> Option.map snd
-      let get_template k = C.get_template k !the_context
-      let get_customtypes k = C.get_customtypes k !the_context
-      let get_file k = C.get_file k !the_context
-      let get_map k = C.get_map k !the_context
-      let get_tile gid = C.get_tile gid !the_context
+      let get_tileset k = C.get_tileset k !context |> Option.map snd
+      let get_template k = C.get_template k !context
+      let get_customtypes k = C.get_customtypes k !context
+      let get_file k = C.get_file k !context
+      let get_map k = C.get_map k !context
+      let get_tile gid = C.get_tile gid !context
     end
 
     module Aux = Core.Aux
 
     include Core.Make (Getters)
 
-    let tilesets () = C.tilesets !the_context
-    let templates () = C.templates !the_context
-    let files () = C.files !the_context
-    let customtypes () = C.customtypes !the_context
-    let maps () = C.maps !the_context
+    let tilesets () = List.map (fun (_, k, v) -> (k, v)) (C.tilesets !context)
+
+    let templates () = C.templates !context
+    let files () = C.files !context
+    let customtypes () = C.customtypes !context
+    let maps () = C.maps !context
 
     let not_found n k () = UE.not_found n k
     let get_class_exn k ~useas = get_class k ~useas >|? not_found "class" k
@@ -61,7 +59,7 @@ let make ~root : t =
         match List.find_opt (fun (fstgid, _) -> fstgid <= id) from_alist with
         | None -> Util.Error.not_found "gid" (Gid.show gid)
         | Some (from_firstgid, ts) ->
-          ( match C.get_tileset ts !the_context with
+          ( match C.get_tileset ts !context with
           | None -> Util.Error.not_found "tileset" ts
           | Some (to_firstgid, _) -> rebase_gid ~from_firstgid ~to_firstgid gid
           )
@@ -86,7 +84,7 @@ let make ~root : t =
         In_channel.with_open_text fname (wrap_error fname f)
       else UE.file_not_found fname
 
-    let with_cache f g = match f !the_context with Some x -> x | None -> g ()
+    let with_cache f g = match f !context with Some x -> x | None -> g ()
 
     let rec load_tileset_xml fname =
       with_cache (fun c -> Option.map snd (C.get_tileset fname c)) @@ fun () ->
@@ -97,7 +95,7 @@ let make ~root : t =
       in
       List.iter load_for_property (Tileset.properties ts) ;
       List.iter load_for_tile (Tileset.tiles ts) ;
-      the_context := C.add_tileset_exn fname ts !the_context ;
+      context := C.add_tileset_exn fname ts !context ;
       ts
 
     and load_template_xml fname =
@@ -110,7 +108,7 @@ let make ~root : t =
       ignore (Template.tileset tem >|= fun (_, ts) -> load_tileset_xml ts) ;
       load_for_object (Template.object_ tem) ;
       let tem = template_remap_gids tem in
-      the_context := C.add_template_exn fname tem !the_context ;
+      context := C.add_template_exn fname tem !context ;
       tem
 
     and load_map_xml fname =
@@ -123,7 +121,7 @@ let make ~root : t =
       List.iter load_for_property (Map.properties m) ;
       List.iter load_for_layer (Map.layers m) ;
       let m = map_remap_gids m in
-      the_context := C.add_map_exn fname m !the_context ;
+      context := C.add_map_exn fname m !context ;
       m
 
     and load_customtypes_json fname =
@@ -134,16 +132,14 @@ let make ~root : t =
              (Aux.reloc_customtype ~from_dir:(Filename.dirname fname)
                 ~to_dir:"" ) in
       List.iter load_for_customtype cts ;
-      List.iter
-        (fun ct -> the_context := C.add_customtype_exn ct !the_context)
-        cts ;
+      List.iter (fun ct -> context := C.add_customtype_exn ct !context) cts ;
       cts
 
     and load_file fname =
       with_cache (C.get_file fname) @@ fun () ->
       with_file fname @@ fun ic ->
       let data = In_channel.input_all ic in
-      the_context := C.add_file_exn fname data !the_context ;
+      context := C.add_file_exn fname data !context ;
       data
 
     and load_for_property prop =
@@ -181,12 +177,10 @@ let make ~root : t =
     let load_customtypes_json fn = UE.protect load_customtypes_json_exn fn
     let load_file fname = UE.protect load_file_exn fname
 
-    let unload_tileset k = the_context := C.remove_tileset k !the_context
-    let unload_template k = the_context := C.remove_template k !the_context
-    let unload_customtypes k =
-      the_context := C.remove_customtypes k !the_context
-    let unload_class k ~useas =
-      the_context := C.remove_class k ~useas !the_context
-    let unload_file k = the_context := C.remove_file k !the_context
-    let unload_map k = the_context := C.remove_map k !the_context
+    let unload_tileset k = context := C.remove_tileset k !context
+    let unload_template k = context := C.remove_template k !context
+    let unload_customtypes k = context := C.remove_customtypes k !context
+    let unload_class k ~useas = context := C.remove_class k ~useas !context
+    let unload_file k = context := C.remove_file k !context
+    let unload_map k = context := C.remove_map k !context
   end )

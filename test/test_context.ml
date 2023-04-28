@@ -1,4 +1,3 @@
-(* TODO: find a better way to expose internal modules to tests *)
 open Tmx__
 open Core.Simple
 

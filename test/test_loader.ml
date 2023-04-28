@@ -6,6 +6,8 @@ module Loader = (val Loader.make ~root:(Sys.getcwd ()))
 
 open Loader
 
+module type PropsT = Sigs.PropsT with type property := Property.t
+
 let check_object_tile ~m ~o ~ts ~tile =
   let ts = get_tileset_exn ts in
   let tile_exp = Tileset.get_tile_exn ts tile in
@@ -35,8 +37,6 @@ let check_tileset_image_file ~ts fname_exp =
   |> Tileset.Single.image |> Image.source
   |> (function `File fname -> fname | _ -> assert false)
   |> A.(check string) "equal" fname_exp
-
-module type PropsT = Sigs.PropsT with type property := Property.t
 
 let check_property (type a) (module P : PropsT with type t = a) x name value =
   P.get_property_exn name x |> Property.value

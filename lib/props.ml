@@ -39,8 +39,6 @@ let make (type a) ~strict ~(property_lists : a -> property list list) : a t =
     let properties t =
       List.fold_left (merge_property_lists ~strict) [] (property_lists t)
 
-    (* TODO: It should be possible to rewrite [properties] and [get_property]
-       so as to reuse the traversal/filtration logic *)
     let get_property (k : string) (t : t) : property option =
       let find k ps = List.find_opt (fun (p : property) -> p.name = k) ps in
       match property_lists t with
