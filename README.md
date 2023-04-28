@@ -7,8 +7,6 @@ The XML file formats for maps (.tmx), tilesets (.tsx), and object templates
 (.tx) are supported, along with the JSON Custom Types format. Support for other
 Tiled JSON formats is planned.
 
-[tiled]: http://mapeditor.org
-
 ## Installation
 
 `dune` and `opam` are required. Install the development version by checking out
@@ -20,10 +18,12 @@ The library will be published to the main `opam` repository in the future.
 
 The API strives to correspond closely to the official [TMX format
 documentation][tmx]. Most differences are self-explanatory. Some additional
-documentation is provided in the interface files. A convenient HTML (and other
-formats) reference is available by running `dune build @doc`.
+documentation is provided in the interface files, particularly for the `Loader`
+module.
 
-[tmx]: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#
+A convenient HTML (and other formats) reference is available by running `dune
+build @doc`. The generated HTML landing page is
+`_build/default/_doc/_html/index.html`.
 
 ## Features
 
@@ -144,3 +144,6 @@ Licensed under the GNU General Public License version 3. See `LICENSE` file for
 details.
 
 *tmx is not part of Tiled.*
+
+[tiled]: http://mapeditor.org
+[tmx]: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#

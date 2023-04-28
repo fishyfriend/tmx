@@ -1,1 +1,1 @@
-include Loader_intf.Intf
+include Loader_intf.Intf  (** @inline *)
