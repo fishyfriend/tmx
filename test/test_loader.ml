@@ -2,7 +2,7 @@ module A = Alcotest
 
 open Tmx__
 
-module Loader = (val Loader.make ~root:(Sys.getcwd ()))
+module Loader = (val Loader.make ~root:(Sys.getcwd ()) ())
 
 open Loader
 

@@ -49,5 +49,5 @@ module type Intf = sig
 
   type t = (module S)
 
-  val make : root:string -> t
+  val make : ?load_file_props:bool -> root:string -> unit -> t
 end

@@ -7,7 +7,7 @@ include Loader_intf
 
 type t = (module S)
 
-let make ~root : t =
+let make ?(load_file_props = true) ~root () : t =
   if Filename.is_relative root then UE.invalid_arg "root" root ;
   ( module struct
     let context = ref C.default
@@ -144,7 +144,7 @@ let make ~root : t =
 
     and load_for_property prop =
       match Property.value prop with
-      | `File fname -> ignore (load_file fname)
+      | `File fname when load_file_props -> ignore (load_file fname)
       | `Class props -> List.iter load_for_property props
       | _ -> ()
 
