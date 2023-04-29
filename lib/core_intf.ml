@@ -56,7 +56,11 @@ module type S = sig
     val create : ?encoding:encoding -> ?compression:compression -> int -> t
     val encoding : t -> encoding option
     val compression : t -> compression option
+
+    (** Access the raw mutable binary data. This allows modifying a [t] in
+        place. {b Use with caution.} *)
     val bytes : t -> bytes
+
     val of_string :
       ?encoding:encoding -> ?compression:compression -> string -> t
     val of_int32_list : int32 list -> t

@@ -127,7 +127,7 @@ let make ?(load_file_props = true) ~root () : t =
       context := C.add_map_exn fname m !context ;
       m
 
-    and load_customtypes_json fname =
+    and import_customtypes_json fname =
       with_file fname @@ fun ic ->
       let cts =
         Conv_json.(with_json_from_channel ic customtypes_of_json)
@@ -171,19 +171,19 @@ let make ?(load_file_props = true) ~root () : t =
     let load_tileset_xml_exn fname = protect load_tileset_xml fname
     let load_map_xml_exn fname = protect load_map_xml fname
     let load_template_xml_exn fname = protect load_template_xml fname
-    let load_customtypes_json_exn fname = protect load_customtypes_json fname
     let load_file_exn fname = protect load_file fname
+    let import_customtypes_json_exn fn = protect import_customtypes_json fn
 
     let load_tileset_xml fname = UE.protect load_tileset_xml_exn fname
     let load_map_xml fname = UE.protect load_map_xml_exn fname
     let load_template_xml fname = UE.protect load_template_xml_exn fname
-    let load_customtypes_json fn = UE.protect load_customtypes_json_exn fn
     let load_file fname = UE.protect load_file_exn fname
+    let import_customtypes_json fn = UE.protect import_customtypes_json_exn fn
 
     let unload_tileset k = context := C.remove_tileset k !context
     let unload_template k = context := C.remove_template k !context
-    let unload_customtypes k = context := C.remove_customtypes k !context
-    let unload_class k ~useas = context := C.remove_class k ~useas !context
     let unload_file k = context := C.remove_file k !context
     let unload_map k = context := C.remove_map k !context
+    let remove_customtypes k = context := C.remove_customtypes k !context
+    let remove_class k ~useas = context := C.remove_class k ~useas !context
   end )

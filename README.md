@@ -10,7 +10,7 @@ Tiled JSON formats is planned.
 ## Installation
 
 `dune` and `opam` are required. Install the development version by checking out
-source code then running `opam install .` from the source directory.
+source code then running `opam update && opam install .` from the source directory.
 
 The library will be published to the main `opam` repository in the future.
 
@@ -43,6 +43,7 @@ build @doc`. The generated HTML landing page is
   - Read tilemap data compressed with Zstd
   - Support for future Tiled versions
   - Better accessors and iteration functions
+  - "Generic" loader (see `Loader` docs)
   - Modify and write Tiled objects (maybe)
 
 ## Not supported
@@ -126,7 +127,7 @@ let () =
   assert (L.Object.class_ o = Some "abc");
   assert (L.Object.get_property "favcol" o = None);
   (* Oops, forgot to load the custom types *)
-  let _ = L.load_customtypes_json_exn "abc-propertytypes.json" in
+  let _ = L.import_customtypes_json_exn "abc-propertytypes.json" in
   (* Now the object inherits properties from the class we just loaded *)
   let favcol =
     match L.Object.get_property_exn "favcol" o |> L.Property.value with
