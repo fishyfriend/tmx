@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" orientation="orthogonal" width="24" height="16" tilewidth="16" tileheight="12">
+ <objectgroup id="2" name="Object Layer 1">
+  <object id="3" x="320.25" y="48" width="28" height="16">
+   <properties>
+    <property name="foo" type="int" value="3"/>
+    <property name="bar" type="ITSABUG" value="5"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>

@@ -93,7 +93,7 @@ let make ?(load_file_props = true) ~root () : t =
       with_cache (fun c -> Option.map snd (C.get_tileset fname c)) @@ fun () ->
       with_file fname @@ fun ic ->
       let ts =
-        Conv_xml.(with_xml_from_channel ic tileset_of_xml)
+        Conv_xml.(with_xml_from_channel ic tileset_of_toplevel_xml)
         |> Aux.reloc_tileset ~from_dir:(Filename.dirname fname) ~to_dir:""
       in
       List.iter load_for_property (Tileset.properties ts) ;
@@ -105,7 +105,7 @@ let make ?(load_file_props = true) ~root () : t =
       with_cache (C.get_template fname) @@ fun () ->
       with_file fname @@ fun ic ->
       let tem =
-        Conv_xml.(with_xml_from_channel ic template_of_xml)
+        Conv_xml.(with_xml_from_channel ic template_of_toplevel_xml)
         |> Aux.reloc_template ~from_dir:(Filename.dirname fname) ~to_dir:""
       in
       ignore (Template.tileset tem >|= fun (_, ts) -> load_tileset_xml ts) ;
@@ -118,7 +118,7 @@ let make ?(load_file_props = true) ~root () : t =
       with_cache (C.get_map fname) @@ fun () ->
       with_file fname @@ fun ic ->
       let m =
-        Conv_xml.(with_xml_from_channel ic map_of_xml)
+        Conv_xml.(with_xml_from_channel ic map_of_toplevel_xml)
         |> Aux.reloc_map ~from_dir:(Filename.dirname fname) ~to_dir:"" in
       List.iter (fun (_, ts) -> ignore (load_tileset_xml ts)) (Map.tilesets m) ;
       List.iter load_for_property (Map.properties m) ;

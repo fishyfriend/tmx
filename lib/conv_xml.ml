@@ -19,15 +19,12 @@ let wrap name f x =
 
 let wrap_list f xs = List.mapi (fun i x -> wrap (string_of_int i) f x) xs
 
-let with_xml_from_channel ic =
-  wrap "{root}" @@ fun f ->
+let with_xml_from_channel ic f =
   let xml =
+    let attrs = [] in
     let _dtd, nodes = Ezxmlm.from_channel ic in
-    let filter = function
-      | `El ((_, attrs), nodes) -> Some (attrs, nodes)
-      | _ -> None in
-    List.filter_map filter nodes |> List.hd in
-  f xml
+    (attrs, nodes) in
+  wrap "{root}" f xml
 
 let attr0 k xml = X.get_attr k (attrs xml)
 let attr k xml f = wrap ("@" ^ k) (fun xml -> attr0 k xml |> f) xml
@@ -152,7 +149,6 @@ let object_of_xml xml =
   let template = attr_opt' "template" xml in
   let properties = child_opt "properties" xml properties_of_xml in
   let shape = shape_of_xml xml in
-  (* TODO: a parse error raised here does not receive proper relocation *)
   Object.make ?id ?name ?class_ ?x ?y ?width ?height ?rotation ?visible
     ?template ?properties ?shape ()
 
@@ -354,14 +350,6 @@ let imagelayer_of_xml xml =
   let repeaty = attr_opt "repeaty" xml bool_of_string01 in
   Imagelayer.make ?image ?repeatx ?repeaty ()
 
-let layer_type_of_string s =
-  match s with
-  | "layer" -> `Tilelayer
-  | "objectgroup" -> `Objectgroup
-  | "imagelayer" -> `Imagelayer
-  | "group" -> `Group
-  | _ -> Util.Error.xml_parse [] "invalid type"
-
 let rec layer_of_xml ~type_ xml =
   let id = attr_opt "id" xml int_of_string in
   let name = attr_opt' "name" xml in
@@ -376,21 +364,18 @@ let rec layer_of_xml ~type_ xml =
   let properties = child_opt "properties" xml properties_of_xml in
   let variant =
     match type_ with
-    | `Tilelayer -> `Tilelayer (tilelayer_of_xml xml)
-    | `Objectgroup -> `Objectgroup (objectgroup_of_xml xml)
-    | `Imagelayer -> `Imagelayer (imagelayer_of_xml xml)
-    | `Group -> `Group (layers_of_xml xml) in
+    | "layer" -> `Tilelayer (tilelayer_of_xml xml)
+    | "objectgroup" -> `Objectgroup (objectgroup_of_xml xml)
+    | "imagelayer" -> `Imagelayer (imagelayer_of_xml xml)
+    | "group" -> `Group (layers_of_xml xml)
+    | _ -> Util.Error.invalid_arg "type_" type_ in
   Layer.make ?id ?name ?class_ ?opacity ?visible ?tintcolor ?offsetx ?offsety
     ?parallaxx ?parallaxy ?properties ~variant ()
 
 and layers_of_xml xml =
-  List.filter_map
-    (function
-      | `El (((_, name), attrs), nodes) ->
-          Util.Option.protect layer_type_of_string name >|= fun type_ ->
-          layer_of_xml ~type_ (attrs, nodes)
-      | `Data _ -> None )
-    (nodes xml)
+  List.concat_map
+    (fun type_ -> children type_ xml @@ layer_of_xml ~type_)
+    ["layer"; "objectgroup"; "imagelayer"; "group"]
 
 let renderorder_of_string s =
   match s with
@@ -467,3 +452,7 @@ let map_of_xml xml =
   Map.make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
     ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
     ?backgroundcolor ?infinite ?properties ~tilesets ~layers ~geometry ()
+
+let map_of_toplevel_xml xml = child "map" xml map_of_xml
+let tileset_of_toplevel_xml xml = child "tileset" xml tileset_of_xml
+let template_of_toplevel_xml xml = child "template" xml template_of_xml

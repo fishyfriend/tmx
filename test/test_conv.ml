@@ -23,7 +23,8 @@ let check_tile_image ~ts ~tile ~pos:(x, y) ~dims:(w, h) fname =
   A.(check (option int)) "equal" (Some h) (Tile.height tile) ;
   A.(check string) "equal" fname (get_tile_image_filename tile)
 
-let m_fixed1 = with_xml_from_file "data/fixed1.tmx" Conv_xml.map_of_xml
+let m_fixed1 =
+  with_xml_from_file "data/fixed1.tmx" Conv_xml.map_of_toplevel_xml
 
 let tc_map_tilelayer =
   A.test_case "Sanity check tilelayer" `Quick @@ fun () ->
@@ -53,10 +54,25 @@ let tc_map_general =
   A.(check int) "equal" 4 (List.length (Map.layers m_fixed1)) ;
   A.(check int) "equal" 28 (List.length (Map.objects m_fixed1))
 
-let test_map =
-  ("Map", [tc_map_tilelayer; tc_map_objectgroup; tc_map_group; tc_map_general])
+let tc_map_bad_object_prop =
+  A.test_case "Bad object property" `Quick @@ fun () ->
+  let err_exp =
+    let path =
+      [ "{root}"; "map"; "objectgroup"; "0"; "object"; "0"; "properties";
+        "property"; "1"; "@type" ] in
+    let msg = "invalid type: ITSABUG" in
+    Error.Error (`Xml_parse (None, path, msg)) in
+  A.check_raises "raises" err_exp @@ fun () ->
+  ignore
+    (with_xml_from_file "data/bad_object_prop.tmx" Conv_xml.map_of_toplevel_xml)
 
-let ts_single1 = with_xml_from_file "data/single1.tsx" Conv_xml.tileset_of_xml
+let test_map =
+  ( "Map",
+    [ tc_map_tilelayer; tc_map_objectgroup; tc_map_group; tc_map_general;
+      tc_map_bad_object_prop ] )
+
+let ts_single1 =
+  with_xml_from_file "data/single1.tsx" Conv_xml.tileset_of_toplevel_xml
 
 let tc_ts_missing =
   A.test_case "Add missing tiles" `Quick @@ fun () ->
