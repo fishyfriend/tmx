@@ -23,7 +23,9 @@ val add_map_exn : string -> Types.map -> t -> t
 
 val remove_tileset : string -> t -> t
 val remove_template : string -> t -> t
-val remove_customtypes : string -> t -> t
-val remove_class : string -> useas:Types.useas -> t -> t
 val remove_file : string -> t -> t
 val remove_map : string -> t -> t
+val remove_customtypes : string -> t -> t
+
+val update_customtypes :
+  string -> (Types.customtype list -> Types.customtype list) -> t -> t

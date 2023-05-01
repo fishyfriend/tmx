@@ -44,6 +44,7 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
 
     let not_found n k () = UE.not_found n k
     let get_class_exn k ~useas = get_class k ~useas >|? not_found "class" k
+    let get_enum_exn k = get_enum k >|? not_found "enum" k
     let get_file_exn k = get_file k >|? not_found "loaded file" k
     let get_map_exn k = get_map k >|? not_found "map" k
     let get_template_exn k = get_template k >|? not_found "template" k
@@ -75,6 +76,10 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
       let from_alist = Option.to_list (Template.tileset tem) in
       Aux.template_map_gids (remap_gid_to_context ~from_alist) tem
 
+    let ensure_file_exists ~rel fname =
+      let fname = if rel then Filename.concat root fname else fname in
+      if not (Sys.file_exists fname) then UE.file_not_found fname
+
     let wrap_error fname f x =
       try f x
       with Error.Error (`Xml_parse (None, path, msg)) ->
@@ -83,9 +88,8 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
     let with_file fname f =
       if not (Filename.is_relative fname) then UE.invalid_arg "filename" fname ;
       let fname = Filename.concat root fname in
-      if Sys.file_exists fname then
-        In_channel.with_open_text fname (wrap_error fname f)
-      else UE.file_not_found fname
+      ensure_file_exists ~rel:false fname ;
+      In_channel.with_open_text fname (wrap_error fname f)
 
     let with_cache f g = match f !context with Some x -> x | None -> g ()
 
@@ -155,7 +159,7 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
       | `File fname ->
         ( match property_files with
         | `Load -> ignore (load_file fname)
-        | `Check when not (Sys.file_exists fname) -> UE.file_not_found fname
+        | `Check -> ensure_file_exists ~rel:true fname
         | _ -> () )
       | `Class props -> List.iter load_for_property props
       | _ -> ()
@@ -184,8 +188,7 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
 
     and load_for_image img =
       match (Image.source img, image_files) with
-      | `File fname, `Check when not (Sys.file_exists fname) ->
-          UE.file_not_found fname
+      | `File fname, `Check -> ensure_file_exists ~rel:true fname
       | _ -> ()
 
     let load_tileset_xml_exn fname = protect load_tileset_xml fname
@@ -205,5 +208,22 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
     let unload_file k = context := C.remove_file k !context
     let unload_map k = context := C.remove_map k !context
     let remove_customtypes k = context := C.remove_customtypes k !context
-    let remove_class k ~useas = context := C.remove_class k ~useas !context
+
+    let remove_class k ~useas =
+      let update cts =
+        List.filter
+          (fun ct ->
+            match Customtype.variant ct with
+            | `Class c when List.mem useas (Class.useas c) -> true
+            | _ -> false )
+          cts in
+      context := C.update_customtypes k update !context
+
+    let remove_enum k =
+      let update cts =
+        List.filter
+          (fun ct ->
+            match Customtype.variant ct with `Enum _ -> true | _ -> false )
+          cts in
+      context := C.update_customtypes k update !context
   end )

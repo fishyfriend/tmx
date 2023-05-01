@@ -86,15 +86,11 @@ let remove_map k t = {t with maps = String_map.remove k t.maps}
 let remove_tileset k t =
   {t with tilesets = List.filter (fun (_, k', _) -> k' <> k) t.tilesets}
 
-let remove_customtypes k t =
-  {t with customtypes = String_map.remove k t.customtypes}
+let update_customtypes k f t =
+  let update cts =
+    match cts with
+    | Some cts -> (match f cts with [] -> None | cts -> Some cts)
+    | None -> None in
+  {t with customtypes = String_map.update k update t.customtypes}
 
-let remove_class k ~useas t =
-  let filter cts =
-    List.filter
-      (fun ct ->
-        match Customtype.variant ct with
-        | `Class c when List.mem useas (Class.useas c) -> false
-        | _ -> true )
-      cts in
-  {t with customtypes = String_map.update k (Option.map filter) t.customtypes}
+let remove_customtypes k t = update_customtypes k (fun _ -> []) t

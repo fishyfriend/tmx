@@ -45,7 +45,7 @@
    <object id="16" gid="9" x="101.75" y="18.25" width="28" height="16"/>
    <object id="17" gid="10" x="236" y="77.5" width="16" height="16"/>
    <object id="18" gid="11" x="120" y="166.75" width="36" height="48"/>
-   <object id="31" type="abc" gid="21" x="109" y="82" width="16" height="16"/>
+   <object id="31" type="myclass" gid="21" x="109" y="82" width="16" height="16"/>
    <object id="32" gid="22" x="51.75" y="169" width="36" height="48"/>
    <object id="33" gid="20" x="217.5" y="46.5" width="28" height="16"/>
   </objectgroup>
@@ -57,7 +57,11 @@
   <object id="10" gid="10" x="247.75" y="32.5" width="16" height="16"/>
   <object id="11" gid="11" x="4" y="109.5" width="36" height="48"/>
   <object id="14" gid="11" x="286.25" y="95.75" width="36" height="48"/>
-  <object id="22" gid="20" x="88" y="60.75" width="28" height="16"/>
+  <object id="22" gid="20" x="88" y="60.75" width="28" height="16">
+   <properties>
+    <property name="baz" propertytype="myenum" type="int" value="5"/>
+   </properties>
+  </object>
   <object id="23" gid="20" x="212.75" y="48.5" width="28" height="16"/>
   <object id="24" gid="20" x="172" y="128.25" width="28" height="16"/>
   <object id="25" gid="21" x="57.5" y="108" width="16" height="16"/>

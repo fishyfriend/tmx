@@ -17,6 +17,11 @@ module Make (Getters : Getters) = struct
   let get_class_members name ~useas =
     get_class name ~useas >|= fun c -> c.members
 
+  let get_enum k =
+    List.find_map
+      (fun ct -> match ct.variant with `Enum e -> Some e | _ -> None)
+      (get_customtypes k)
+
   let normalize_plist ps =
     let cmp (a : property) (b : property) = compare a.name b.name in
     List.sort_uniq cmp ps
@@ -1085,6 +1090,15 @@ module Make (Getters : Getters) = struct
               (values t) ([], false) in
           if found then Some alist else None
       | _ -> None
+
+    let wrap f t v =
+      match f t v with
+      | Some x -> x
+      | _ -> Util.Error.invalid_arg "value" (Property.Value.show v)
+
+    let read_as_int_exn t v = wrap read_as_int t v
+    let read_as_string_exn t v = wrap read_as_string t v
+    let read_as_alist_exn t v = wrap read_as_alist t v
   end
 
   type enum = Enum.t

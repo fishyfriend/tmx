@@ -10,10 +10,24 @@
                 "value": "#ff64c832"
             }
         ],
-        "name": "abc",
+        "name": "myclass",
         "type": "class",
         "useAs": [
             "object"
+        ]
+    },
+    {
+        "color": "#ffa0a4a0",
+        "drawFill": true,
+        "id": 2,
+        "name": "myenum",
+        "type": "enum",
+        "storageType": "int",
+        "valuesAsFlags": true,
+        "values": [
+            "hascat",
+            "hasdog",
+            "hasfox"
         ]
     }
 ]

@@ -683,13 +683,12 @@ module type S = sig
     val valuesasflags : t -> bool
     val values : t -> string list
 
-    val read_as_string :
-      t -> [> `String of string | `Int of int] -> string option
-
-    val read_as_int : t -> [> `String of string | `Int of int] -> int option
-
-    val read_as_alist :
-      t -> [> `String of string | `Int of int] -> (string * bool) list option
+    val read_as_string : t -> Property.Value.t -> string option
+    val read_as_int : t -> Property.Value.t -> int option
+    val read_as_alist : t -> Property.Value.t -> (string * bool) list option
+    val read_as_string_exn : t -> Property.Value.t -> string
+    val read_as_int_exn : t -> Property.Value.t -> int
+    val read_as_alist_exn : t -> Property.Value.t -> (string * bool) list
 
     include Sigs.StdT with type t := t
   end
@@ -720,6 +719,7 @@ module type S = sig
   include Getters
 
   val get_class : string -> useas:Class.useas -> class_ option
+  val get_enum : string -> enum option
 end
 
 module type S_generic =

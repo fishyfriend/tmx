@@ -55,6 +55,9 @@ build @doc`. The generated HTML landing page is
 
 ## Example
 
+If you have checked out the source, run `utop` from the source directory and do
+`#require "tmx";;`. Then you can paste in this example and run it.
+
 ```ocaml
 open Tmx ;;
 
@@ -114,20 +117,20 @@ let () =
   let tile = Option.get (L.Tilelayer.tile_at tl ~col ~row) in
   match L.Property.value (L.Tile.get_property_exn "baz" tile) with
   | `File fname ->
-    let msg = L.get_file_exn fname in
+    let msg = String.trim (L.get_file_exn fname) in
     Printf.printf "Tile at col %d row %d file contents: %s\n" col row msg
   | _ -> assert false
 ;;
 
-(* Read properties with custom types *)
+(* Read custom class values *)
 
 let () =
   let o_id = 31 in
   let o = L.Map.get_object_exn m o_id in
-  assert (L.Object.class_ o = Some "abc");
+  assert (L.Object.class_ o = Some "myclass");
   assert (L.Object.get_property "favcol" o = None);
   (* Oops, forgot to load the custom types *)
-  let _ = L.import_customtypes_json_exn "abc-propertytypes.json" in
+  let _ = L.import_customtypes_json_exn "propertytypes1.json" in
   (* Now the object inherits properties from the class we just loaded *)
   let favcol =
     match L.Object.get_property_exn "favcol" o |> L.Property.value with
@@ -135,6 +138,20 @@ let () =
     | _ -> assert false in
   Printf.printf "Object %d's favorite color is %s\n" o_id favcol
 ;;
+
+(* Read custom enum values *)
+
+let () =
+  let o = L.Map.get_object_exn m 22 in
+  let p = L.Object.get_property_exn "baz" o in
+  assert (L.Property.propertytype p = Some "myenum");
+  let e = L.get_enum_exn "myenum" in
+  let v = L.Property.value p in
+  List.iter (fun (label, status) ->
+      Printf.printf "flag %s -> %s\n" label (if status then "yes" else "no"))
+    (L.Enum.read_as_alist_exn e v)
+;;
+
 ```
 
 ## Copyright

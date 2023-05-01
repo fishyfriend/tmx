@@ -29,6 +29,9 @@ module type S = sig
   val load_file : string -> (string, Error.t) result
   val load_file_exn : string -> string
 
+  (** Base directory for loading *)
+  val root : string
+
   (** {1 Querying loaded resources}
 
       String arguments and alist keys refer to the name of the source file, {b
@@ -67,9 +70,9 @@ module type S = sig
 
   (** {1:customtypes Custom types}
 
-      Custom types work differently from other resources. They are never
-      auto-loaded and, once loaded, they are accessed by name (as returned by
-      {!Customtype.name}) rather than by the name of the source file.
+      Custom types work differently from other loadable resources. They are
+      never auto-loaded and, once loaded, they are accessed by name (as returned
+      by {!Customtype.name}) rather than by the name of the source file.
 
       Multiple custom types with the same name are permitted so long as their
       {!val:Class.useas} fields don't conflict. For this purpose, enums are
@@ -103,6 +106,9 @@ module type S = sig
   val get_class : string -> useas:Class.useas -> Class.t option
   val get_class_exn : string -> useas:Class.useas -> Class.t
   val remove_class : string -> useas:Class.useas -> unit
+  val get_enum : string -> Enum.t option
+  val get_enum_exn : string -> Enum.t
+  val remove_enum : string -> unit
 end
 
 type t = (module S)
