@@ -78,7 +78,7 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
 
     let ensure_file_exists ~rel fname =
       let fname = if rel then Filename.concat root fname else fname in
-      if not (Sys.file_exists fname) then UE.file_not_found fname
+      if not (Sys.file_exists fname) then UE.not_found "file" fname
 
     let wrap_error fname f x =
       try f x

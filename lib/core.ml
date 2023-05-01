@@ -421,7 +421,8 @@ module Make (Getters : Getters) = struct
     let get_object t id = Int_map.find_opt id t.objects
 
     let get_object_exn t id =
-      get_object t id >|? fun () -> Util.Error.object_not_found id
+      get_object t id >|? fun () ->
+      Util.Error.not_found "object" (string_of_int id)
 
     let reloc ~from_dir ~to_dir t =
       {t with objects = Int_map.map (Object.reloc ~from_dir ~to_dir) t.objects}
@@ -535,7 +536,8 @@ module Make (Getters : Getters) = struct
       | _ -> None
 
     let get_object_exn t id =
-      get_object t id >|? fun () -> Util.Error.object_not_found id
+      get_object t id >|? fun () ->
+      Util.Error.not_found "object" (string_of_int id)
 
     module P = (val make_std_props ~class_ ~properties ~useas:`Layer)
 
@@ -839,7 +841,7 @@ module Make (Getters : Getters) = struct
     type geometry = Geometry.t
 
     type t = map =
-      { version : string;
+      { version : int * int;
         tiledversion : string option;
         class_ : string option;
         renderorder : Renderorder.t option;
@@ -862,6 +864,11 @@ module Make (Getters : Getters) = struct
         ~width ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
         ?backgroundcolor ?infinite ?properties ?(tilesets = []) ?(layers = [])
         ~geometry () =
+      let () =
+        if version < Util.min_format_version then
+          let maj, min = version in
+          Util.Error.invalid_arg "version" (Format.sprintf "%d.%d" maj min)
+      in
       let properties = properties >|= normalize_plist in
       let tilesets =
         (* Sort by firstgid descending! *)
@@ -924,7 +931,8 @@ module Make (Getters : Getters) = struct
     let objects t = List.concat_map Layer.objects (layers t)
     let get_object t id = List.find_opt (fun o -> Object.id o = id) (objects t)
     let get_object_exn t id =
-      get_object t id >|? fun () -> Util.Error.object_not_found id
+      get_object t id >|? fun () ->
+      Util.Error.not_found "object" (string_of_int id)
 
     module P = (val make_std_props ~class_ ~properties ~useas:`Tile)
 

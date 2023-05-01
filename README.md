@@ -42,9 +42,9 @@ build @doc`. The generated HTML landing page is
 
   - Load JSON maps (.tmj), tilesets (.tsj), and templates (.tj)
   - Read tilemap data compressed with Zstd
-  - Support for future Tiled versions
+  - Support for future versions of the TMX format
   - Better accessors and iteration functions
-  - Modify and write Tiled objects (maybe)
+  - Modify and write TMX data (maybe)
 
 ## Not supported
 

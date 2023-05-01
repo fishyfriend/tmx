@@ -575,7 +575,7 @@ module type S = sig
     type t
 
     val make :
-      version:string ->
+      version:int * int ->
       ?tiledversion:string ->
       ?class_:string ->
       ?renderorder:renderorder ->
@@ -595,7 +595,7 @@ module type S = sig
       unit ->
       t
 
-    val version : t -> string
+    val version : t -> int * int
     val tiledversion : t -> string option
     val renderorder : t -> Renderorder.t
     val compressionlevel : t -> int

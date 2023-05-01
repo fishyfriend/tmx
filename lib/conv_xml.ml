@@ -330,6 +330,10 @@ let template_of_xml xml =
   let object_ = child "object" xml object_of_xml in
   Template.make ?tileset object_
 
+let version_of_string s =
+  try Scanf.sscanf s "%d.%d" @@ fun x y -> (x, y)
+  with _ -> Util.Error.invalid_arg "version" s
+
 let tilelayer_of_xml xml =
   let width = attr "width" xml int_of_string in
   let height = attr "height" xml int_of_string in
@@ -441,7 +445,7 @@ let map_tileset_of_xml xml =
         "Missing attribute \"source\" (embedded tilesets are not supported)"
 
 let map_of_xml xml =
-  let version = attr' "version" xml in
+  let version = attr "version" xml version_of_string in
   let tiledversion = attr_opt' "tiledversion" xml in
   let class_ = attr_opt' "class" xml in
   let renderorder = attr_opt "renderorder" xml renderorder_of_string in

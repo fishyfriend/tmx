@@ -55,7 +55,7 @@ let test_tile =
   let m =
     let og = Objectgroup.make ~objects:(Array.to_list objects) () in
     let l = Layer.make ~variant:(`Objectgroup og) () in
-    Map.make ~version:"0.0" ~width:1 ~height:1 ~tilewidth:16 ~tileheight:16
+    Map.make ~version:(1, 10) ~width:1 ~height:1 ~tilewidth:16 ~tileheight:16
       ~tilesets:[(1, "ts1"); (20, "ts2")]
       ~layers:[l] ~geometry:`Orthogonal () in
   let t =

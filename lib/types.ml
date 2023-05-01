@@ -143,7 +143,7 @@ type geometry =
   [`Orthogonal | `Isometric | `Staggered of staggered | `Hexagonal of hexagonal]
 
 type map =
-  { version : string;
+  { version : int * int;
     tiledversion : string option;
     class_ : string option;
     renderorder : [`Right_down | `Right_up | `Left_down | `Left_up] option;

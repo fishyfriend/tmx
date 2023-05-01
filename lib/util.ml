@@ -27,8 +27,6 @@ module Error = struct
   let zstd () = throw (`Zstd "Zstd compression not implemented")
   let duplicate kind name = throw (`Duplicate (kind, name))
   let not_found kind name = throw (`Not_found (kind, name))
-  let object_not_found id = not_found "object" (string_of_int id)
-  let file_not_found fname = not_found "file" fname
   let other exn = throw (`Other exn)
 end
 
@@ -55,3 +53,5 @@ module Filename = struct
       | xs, [] -> List.fold_left Filename.concat "" xs in
     aux xs ys
 end
+
+let min_format_version = (1, 10)
