@@ -23,6 +23,9 @@ let check_tile_image ~ts ~tile ~pos:(x, y) ~dims:(w, h) fname =
   A.(check (option int)) "equal" (Some h) (Tile.height tile) ;
   A.(check string) "equal" fname (get_tile_image_filename tile)
 
+let check_gid_at ~tl ~col ~row gid =
+  A.check (module Gid) "equal" gid (Tilelayer.gid_at ~col ~row tl)
+
 let m_fixed1 =
   with_xml_from_file "data/fixed1.tmx" Conv_xml.map_of_toplevel_xml
 
@@ -33,9 +36,7 @@ let tc_map_tilelayer =
   A.(check int) "equal" 24 (Tilelayer.width tl) ;
   A.(check int) "equal" 16 (Tilelayer.height tl) ;
   for col = 0 to 15 do
-    A.(check int)
-      "equal" (col mod 8)
-      (Gid.id (Tilelayer.gid_at ~col ~row:8 tl))
+    check_gid_at ~tl ~col ~row:8 (Gid.make (col mod 8))
   done
 
 let tc_map_objectgroup =
@@ -54,6 +55,26 @@ let tc_map_general =
   A.(check int) "equal" 4 (List.length (Map.layers m_fixed1)) ;
   A.(check int) "equal" 28 (List.length (Map.objects m_fixed1))
 
+let tc_map_infinite =
+  A.test_case "Infinite map" `Quick @@ fun () ->
+  let tl =
+    with_xml_from_file "data/infinite1.tmx" Conv_xml.map_of_toplevel_xml
+    |> Fun.flip Map.get_layer_exn 1
+    |> Layer.variant
+    |> function
+    | `Tilelayer tl -> tl
+    | _ -> assert false in
+  check_gid_at ~tl ~col:2 ~row:3 (Gid.make 5) ;
+  check_gid_at ~tl ~col:17 ~row:20 (Gid.make 6) ;
+  check_gid_at ~tl ~col:44 ~row:39 (Gid.make 7) ;
+  let sum = ref 0 in
+  for col = 0 to 44 do
+    for row = 0 to 39 do
+      if Tilelayer.gid_at tl ~col ~row <> Gid.make 0 then incr sum
+    done
+  done ;
+  A.(check int) "equal" 3 !sum
+
 let tc_map_bad_object_prop =
   A.test_case "Bad object property" `Quick @@ fun () ->
   let err_exp =
@@ -69,7 +90,7 @@ let tc_map_bad_object_prop =
 let test_map =
   ( "Map",
     [ tc_map_tilelayer; tc_map_objectgroup; tc_map_group; tc_map_general;
-      tc_map_bad_object_prop ] )
+      tc_map_infinite; tc_map_bad_object_prop ] )
 
 let ts_single1 =
   with_xml_from_file "data/single1.tsx" Conv_xml.tileset_of_toplevel_xml
