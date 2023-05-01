@@ -114,7 +114,7 @@ end
 type t = (module S)
 
 module type Intf = sig
-  (** The entrypoint for loading and accessing Tiled data.
+  (** The entrypoint for loading and accessing TMX data.
 
       Typical usage looks like:
 
@@ -124,10 +124,10 @@ module type Intf = sig
         (* ... *)
       ]}
 
-      A loader provides both a stateful context for loading Tiled resources and
-      a collection of immutable OCaml types representing Tiled data types. Each
-      type is paired with a submodule ([Map], [Object], etc.) providing
-      accessors and other functions.
+      A loader provides both a stateful context for loading TMX resources and a
+      collection of immutable OCaml types representing TMX data types. Each type
+      is paired with a submodule ([Map], [Object], etc.) providing accessors and
+      other functions.
 
       {2 Transformations}
 
@@ -135,16 +135,16 @@ module type Intf = sig
       noting. First, it rewrites all paths to be relative to its root
       directory. So, for example, a reference to [../sprite.png] that occurs in
       [a/b/tileset.tsx] is rewritten to [a/sprite.png]. This avoids the need to
-      traverse nested data structures to infer the full path.
+      traverse nested data structures to calculate the full path.
 
       Second, within a map or template, the loader rewrites all tile GIDs to be
-      relative to all known tilesets rather than just those used by the
-      containing map or template. This allows tile GIDs from different maps to
-      be treated interchangeably even if those maps use different tilesets.
+      point into a table of all loaded tilesets rather than just those used by
+      the containing map or template. This allows tile GIDs from different maps
+      to be treated interchangeably even if those maps use different tilesets.
 
       {2 Semantics}
 
-      The functions on Tiled data types simulate the semantics of the equivalent
+      The functions on TMX data types simulate the semantics of the equivalent
       data types in the Tiled desktop application, notably by providing tile GID
       and custom property lookups based on the current loader context.
 
@@ -162,7 +162,11 @@ module type Intf = sig
       ]}
 
       In this case, the solution to avoid surprises is to ensure that all
-      required Custom Types are loaded prior to using property values. *)
+      required Custom Types are loaded prior to using property values.
+
+      For details on custom property inheritance rules, see
+      {{:https://discourse.mapeditor.org/t/interitance-hierarchy-of-custom-properties/2749/3}
+      this post} by Tiled's primary developer. *)
 
   (** {2 API} *)
 

@@ -685,6 +685,8 @@ module Make (Getters : Getters) = struct
 
     type variant = Variant.t
 
+    (* NOTE: Ordering of tiles is not preserved. This should be surfaced in the
+       docs if/when support for writing TMX values is implemented. *)
     type t = tileset =
       { name : string;
         class_ : string option;
@@ -759,7 +761,7 @@ module Make (Getters : Getters) = struct
       | `Single single -> Single.tilecount single
       | `Collection -> Int_map.cardinal t.tiles
 
-    let max_id t =
+    let max_tile_id t =
       match variant t with
       | `Single _ -> tilecount t - 1
       | `Collection ->

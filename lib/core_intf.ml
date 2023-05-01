@@ -273,9 +273,15 @@ module type S = sig
     val y : t -> int
     val width : t -> int option
     val height : t -> int option
-    val image : t -> Image.t option
     val objectgroup : t -> Object.t list
     val animation : t -> Frame.t list
+
+    (** Get the image associated with this tile.
+
+        For a tile in a single-image tileset, the image is calculated
+        automatically and represents the subimage of that tile within the
+        tileset grid image. *)
+    val image : t -> Image.t option
 
     include Sigs.StdT with type t := t
     include Sigs.ClassPropsT with type t := t and type property := Property.t
@@ -499,9 +505,11 @@ module type S = sig
     val grid : t -> Grid.t
     val variant : t -> variant
     val tiles : t -> Tile.t list
-    val max_id : t -> int
     val get_tile : t -> int -> Tile.t option
     val get_tile_exn : t -> int -> Tile.t
+
+    (** Return the largest tile ID present in this tileset. *)
+    val max_tile_id : t -> int
 
     include Sigs.StdT with type t := t
     include Sigs.ClassPropsT with type t := t and type property := Property.t

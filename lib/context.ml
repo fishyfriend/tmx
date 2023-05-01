@@ -47,7 +47,7 @@ let add_tileset_exn k ts t =
   let firstgid =
     match t.tilesets with
     | [] -> 1
-    | (firstgid0, _, ts0) :: _ -> firstgid0 + Tileset.max_id ts0 + 1 in
+    | (firstgid0, _, ts0) :: _ -> firstgid0 + Tileset.max_tile_id ts0 + 1 in
   let tilesets = (firstgid, k, ts) :: t.tilesets in
   {t with tilesets}
 

@@ -1,41 +1,54 @@
 # tmx
 
-tmx is an OCaml library for reading data files from the 2D game map editor
+`tmx` is an OCaml library for reading data files from the 2D game map editor
 [Tiled][tiled].
 
-The XML file formats for maps (.tmx), tilesets (.tsx), and object templates
-(.tx) are supported, along with the JSON Custom Types format. Support for other
-Tiled JSON formats is planned.
+The library aims for broad coverage of Tiled's [TMX file formats][tmx]. It
+provides an imperative context for loading TMX data files, a collection of
+immutable types corresponding to TMX data structures, and a suite of functions
+for working with those types.
+
+The auxiliary functions emulate the semantics of various TMX structures as they
+exist in the Tiled desktop application, including [custom property][properties]
+inheritance and the application of [object templates][templates]. This allows
+the attributes of TMX structures in OCaml to match exactly what is observed in
+Tiled.
+
+The XML-based map (.tmx), tileset (.tsx), and template (.tx) formats are
+supported along with the undocumented Custom Types JSON format. Support for the
+JSON map, tileset, and template formats is planned.
+
+The library should be considered alpha quality but usable. No major API changes
+are currently planned.
 
 ## Installation
 
 `dune` and `opam` are required. Install the development version by checking out
-source code then running `opam update && opam install .` from the source directory.
+source code then running `opam update && opam install .` from the source
+directory.
 
-The library will be published to the main `opam` repository in the future.
+The library will hopefully be published to the main `opam` repository in the
+future.
 
 ## Documentation
-
-The API strives to correspond closely to the official [TMX format
-documentation][tmx]. Most differences are self-explanatory. Some additional
-documentation is provided in the interface files, particularly for the `Loader`
-module.
 
 A convenient HTML (and other formats) reference is available by running `dune
 build @doc`. The generated HTML landing page is
 `_build/default/_doc/_html/index.html`.
 
+The most important documentation is for the `Loader` module. For the TMX types,
+one can generally consult the official [TMX format documentation][tmx]; the API
+corresponds closely with it, and most differences are self-explanatory.
+
 ## Features
 
   - Read maps, tilesets, and object templates from latest Tiled version (1.10)
-  - Autoload tilesets and templates referenced by a map, and tilesets referenced
-    by a template
-  - Optionally autoload files referenced by custom property values
-  - Optionally check for the presence of referenced image files
-  - Faithfully apply Tiled's rules for property inheritance
+  - Automatically load TMX dependencies
+  - Optionally check for the presence of image files
   - Read custom class and enum properties
-  - Get the position and dimensions of tile subimages
-  - Access embedded image data as raw bytes
+  - Apply the Tiled application's rules for class and property inheritance
+  - Automatically calculate the position and dimensions of tile subimages
+  - Access embedded image data
   - See nice parse errors (in case you hand-write your XML)
 
 ## Planned features
@@ -50,8 +63,9 @@ build @doc`. The generated HTML landing page is
 
   - Embedded tilesets
   - Tiled versions before 1.10
+  - Deprecated parts of the TMX format
+  - Wang tiles, transformations, etc.
   - Object Types files (use Custom Types JSON format instead)
-  - Automatic image loading
 
 ## Example
 
@@ -165,3 +179,6 @@ details.
 
 [tiled]: http://mapeditor.org
 [tmx]: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#
+[tsdl]: https://erratique.ch/software/tsdl
+[templates]: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#template-files
+[properties]: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#properties
