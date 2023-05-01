@@ -120,25 +120,23 @@ module type Intf = sig
 
       A loader provides both a stateful context for loading Tiled resources and
       a collection of immutable OCaml types representing Tiled data types. Each
-      type is paired with a submodule ([Map], [Object], etc.) providing accessor
-      and other functions.
+      type is paired with a submodule ([Map], [Object], etc.) providing
+      accessors and other functions.
 
       {2 Transformations}
 
       When loading resources, the loader applies two transformations worth
-      noting. These are done for programmer convenience (both user-side and
-      implementation-side).
-
-      First, the loader rewrites all paths to be relative to its root
+      noting. First, it rewrites all paths to be relative to its root
       directory. So, for example, a reference to [../sprite.png] that occurs in
-      [a/b/tileset.tsx] is rewritten to [a/sprite.png].
+      [a/b/tileset.tsx] is rewritten to [a/sprite.png]. This avoids the need to
+      traverse nested data structures to infer the full path.
 
       Second, within a map or template, the loader rewrites all tile GIDs to be
-      relative to all known tilesets, rather than just those used by the
-      containing map or template. This means that tile GIDs from different maps
-      can be treated interchangeably even if those maps use different tilesets.
+      relative to all known tilesets rather than just those used by the
+      containing map or template. This allows tile GIDs from different maps to
+      be treated interchangeably even if those maps use different tilesets.
 
-      {2 Semantics of Tiled data types}
+      {2 Semantics}
 
       The functions on Tiled data types simulate the semantics of the equivalent
       data types in the Tiled desktop application, notably by providing tile GID
@@ -147,10 +145,10 @@ module type Intf = sig
       This convenience comes with the caveat that accessor functions may return
       different values after the loader state changes. For example, if loading a
       new Custom Types file would result in new properties being inherited by
-      some map object, code like the following might succeed (taking module [L]
-      from the previous snippet):
+      some map object, code like the following might succeed:
 
-      {[let o = L.Map.get_object_exn m 42 in
+      {[(* ... continuing the previous snippet *)
+        let o = L.Map.get_object_exn m 42 in
         assert (L.Object.get_property "active" o = None);
         let _ = L.import_customtypes_json_exn "propertytypes.json" in
         assert (L.Object.get_property "active" o =
@@ -158,12 +156,7 @@ module type Intf = sig
       ]}
 
       In this case, the solution to avoid surprises is to ensure that all
-      required Custom Types are loaded prior to using property values.
-
-      You may not need the fancy lookups -- for example, if your game
-      application code will apply property inheritance rules itself. Use
-      {!Generic_loader} and/or the [to_generic] functions in that case.
-      {b (Not yet implemented!)} *)
+      required Custom Types are loaded prior to using property values. *)
 
   (** {2 API} *)
 
@@ -183,8 +176,9 @@ module type Intf = sig
       do nothing. The default is [`Check].
 
       [property_files] tells how to handle custom properties that reference a
-      file. [`Load] means load the file; the other two options as above. The
-      default is [`Load]. *)
+      file. [`Load] means load the file; [`Check] means do not load, but fail if
+      the file does not exist; [`Ignore] means do nothing. The default is
+      [`Load]. *)
   val make :
     ?image_files:[`Check | `Ignore] ->
     ?property_files:[`Load | `Check | `Ignore] ->

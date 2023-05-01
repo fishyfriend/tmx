@@ -31,6 +31,7 @@ build @doc`. The generated HTML landing page is
   - Autoload tilesets and templates referenced by a map, and tilesets referenced
     by a template
   - Optionally autoload files referenced by custom property values
+  - Optionally check for the presence of referenced image files
   - Faithfully apply Tiled's rules for property inheritance
   - Read custom class and enum properties
   - Get the position and dimensions of tile subimages
@@ -43,7 +44,6 @@ build @doc`. The generated HTML landing page is
   - Read tilemap data compressed with Zstd
   - Support for future Tiled versions
   - Better accessors and iteration functions
-  - "Generic" loader (see `Loader` docs)
   - Modify and write Tiled objects (maybe)
 
 ## Not supported
