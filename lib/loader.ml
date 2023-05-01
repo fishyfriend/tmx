@@ -7,7 +7,7 @@ include Loader_intf
 
 type t = (module S)
 
-let make ?(load_file_props = true) ~root () : t =
+let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
   ( module struct
     let root =
       if Filename.is_relative root then Filename.concat (Sys.getcwd ()) root
@@ -96,8 +96,13 @@ let make ?(load_file_props = true) ~root () : t =
         Conv_xml.(with_xml_from_channel ic tileset_of_toplevel_xml)
         |> Aux.reloc_tileset ~from_dir:(Filename.dirname fname) ~to_dir:""
       in
+      ( match Tileset.variant ts with
+      | `Single s ->
+          load_for_image (Tileset.Single.image s) ;
+          List.iter (load_for_tile ~check_images:false) (Tileset.tiles ts)
+      | `Collection ->
+          List.iter (load_for_tile ~check_images:true) (Tileset.tiles ts) ) ;
       List.iter load_for_property (Tileset.properties ts) ;
-      List.iter load_for_tile (Tileset.tiles ts) ;
       context := C.add_tileset_exn fname ts !context ;
       ts
 
@@ -147,7 +152,11 @@ let make ?(load_file_props = true) ~root () : t =
 
     and load_for_property prop =
       match Property.value prop with
-      | `File fname when load_file_props -> ignore (load_file fname)
+      | `File fname ->
+        ( match property_files with
+        | `Load -> ignore (load_file fname)
+        | `Check when not (Sys.file_exists fname) -> UE.file_not_found fname
+        | _ -> () )
       | `Class props -> List.iter load_for_property props
       | _ -> ()
 
@@ -155,17 +164,28 @@ let make ?(load_file_props = true) ~root () : t =
       ignore (Object.template o >|= load_template_xml) ;
       List.iter load_for_property (Object.properties o)
 
-    and load_for_tile tile =
+    and load_for_tile ~check_images tile =
       List.iter load_for_object (Tile.objectgroup tile) ;
-      List.iter load_for_property (Tile.properties tile)
+      List.iter load_for_property (Tile.properties tile) ;
+      if check_images then Option.iter load_for_image (Tile.image tile)
 
     and load_for_layer l =
       List.iter load_for_property (Layer.properties l) ;
-      List.iter load_for_object (Layer.objects l)
+      List.iter load_for_object (Layer.objects l) ;
+      match Layer.variant l with
+      | `Imagelayer il -> Option.iter load_for_image (Imagelayer.image il)
+      | `Group ls -> List.iter load_for_layer ls
+      | _ -> ()
 
     and load_for_customtype ct =
       match Customtype.variant ct with
       | `Class c -> List.iter load_for_property (Class.members c)
+      | _ -> ()
+
+    and load_for_image img =
+      match (Image.source img, image_files) with
+      | `File fname, `Check when not (Sys.file_exists fname) ->
+          UE.file_not_found fname
       | _ -> ()
 
     let load_tileset_xml_exn fname = protect load_tileset_xml fname

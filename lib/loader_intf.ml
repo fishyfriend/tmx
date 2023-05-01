@@ -176,8 +176,19 @@ module type Intf = sig
 
   (** Create a new loader.
 
-      [root] gives the base directory. [load_file_props] tells whether the
-      loader should auto-load files for custom properties that have file
-      values. *)
-  val make : ?load_file_props:bool -> root:string -> unit -> t
+      [root] gives the base directory for the loader.
+
+      [image_files] tells how to handle references to image files during
+      loading. [`Check] means fail if the file does not exist; [`Ignore] means
+      do nothing. The default is [`Check].
+
+      [property_files] tells how to handle custom properties that reference a
+      file. [`Load] means load the file; the other two options as above. The
+      default is [`Load]. *)
+  val make :
+    ?image_files:[`Check | `Ignore] ->
+    ?property_files:[`Load | `Check | `Ignore] ->
+    root:string ->
+    unit ->
+    t
 end
