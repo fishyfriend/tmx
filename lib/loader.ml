@@ -32,8 +32,9 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
     end
 
     module Aux = Core.Aux
+    module Core = Core.Make (Getters)
 
-    include Core.Make (Getters)
+    include Core
 
     let tilesets () = List.map (fun (_, k, v) -> (k, v)) (C.tilesets !context)
 

@@ -1,7 +1,8 @@
 module type S = sig
-  (** {1 Core types} *)
+  module Core : Core.S
 
-  include Core.S
+  (** @inline *)
+  include module type of struct include Core end
 
   (** {1 Resource loading}
 
@@ -166,13 +167,19 @@ module type Intf = sig
 
       For details on custom property inheritance rules, see
       {{:https://discourse.mapeditor.org/t/interitance-hierarchy-of-custom-properties/2749/3}
-      this post} by Tiled's primary developer. *)
+      this post} by Tiled's primary developer. (In the post, the older term
+      "ObjectType" should be read as equivalent to the current Tiled concept of
+      "class.")
+
+      To get the "raw" custom properties without applying inheritance rules,
+      use [own_properties], [get_own_property], and [get_own_property_exn].
+  *)
 
   (** {2 API} *)
 
   module type S = sig
     (* TODO: This should make doc for [S] appear inline, but doesn't *)
-    include S  (** @inline *)
+    include S  (** @open *)
   end
 
   type t = (module S)

@@ -235,6 +235,12 @@ module type S = sig
 
     include Sigs.StdT with type t := t
     include Sigs.ClassPropsT with type t := t and type property := Property.t
+
+    (** Get an object's "raw" class.
+
+        Unlike {!val:class_}, this does not inherit from the object's template
+        or tile. *)
+    val own_class : t -> string option
   end
 
   type object_ = Object.t

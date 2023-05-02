@@ -27,9 +27,9 @@ module Make (Getters : Getters) = struct
     List.sort_uniq cmp ps
 
   let get_std_plists ~class_ ~properties ~useas x =
-    let class_props = class_ x >>= get_class_members ~useas |? [] in
     let own_props = properties x in
-    [class_props; own_props]
+    let class_props = class_ x >>= get_class_members ~useas |? [] in
+    [own_props; class_props]
 
   let make_std_props ~class_ ~properties ~useas =
     let property_lists x = get_std_plists ~class_ ~properties ~useas x in
@@ -319,7 +319,8 @@ module Make (Getters : Getters) = struct
     let shape t = with_proto t (fun t -> t.shape) |? `Rectangle
     let tile t = match shape t with `Tile gid -> get_tile gid | _ -> None
     let tile_class t = tile t >>= fun tile -> tile.class_
-    let class_ t = with_proto t (fun t -> t.class_) >>? fun () -> tile_class t
+    let own_class t = t.class_
+    let class_ t = with_proto t own_class >>? fun () -> tile_class t
 
     let width t =
       match shape t with
@@ -344,11 +345,11 @@ module Make (Getters : Getters) = struct
       | _ -> with_proto t (fun t -> t.height) |? 0.
 
     let property_lists t =
-      let class_props = class_ t >>= get_class_members ~useas:`Object |? [] in
+      let own_props = properties t in
       let template_props = proto t >|= properties |? [] in
       let tile_props = tile t >|= (fun tile -> tile.properties) |? [] in
-      let own_props = properties t in
-      [class_props; tile_props; template_props; own_props]
+      let class_props = class_ t >>= get_class_members ~useas:`Object |? [] in
+      [own_props; template_props; tile_props; class_props]
 
     module P = (val Props.make ~strict:false ~property_lists)
 

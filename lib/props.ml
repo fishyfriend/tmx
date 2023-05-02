@@ -5,57 +5,67 @@ module type S = Sigs.PropsT with type property := property
 
 type 'a t = (module S with type t = 'a)
 
-let rec merge_propertys (p0 : property as 'a) (p : 'a) : 'a =
+let rec merge_propertys (p : property) (p0 : property) : property =
   let propertytype = p.propertytype >>? fun () -> p0.propertytype in
   let value =
-    match (p0.value, p.value) with
+    match (p.value, p0.value) with
     (* Promote raw JSON types as needed. *)
-    | `Int _, `Float x -> `Int (int_of_float x)
-    | `Color _, `String s -> `Color (Color.of_string s)
-    | `File _, `String s -> `File s
-    | `Object _, `Float x -> `Object (int_of_float x)
-    | `Class ts0, `Class ts ->
-        `Class (merge_property_lists ~strict:false ts0 ts)
-    | _, v -> v in
+    | `Float x, `Int _ -> `Int (int_of_float x)
+    | `String s, `Color _ -> `Color (Color.of_string s)
+    | `String s, `File _ -> `File s
+    | `Float x, `Object _ -> `Object (int_of_float x)
+    | `Class ts, `Class ts0 ->
+        `Class (merge_property_lists ~strict:false ts ts0)
+    | v, _ -> v in
   {p with propertytype; value}
 
-and merge_property_lists ~strict (ps0 : property list as 'b) (ps : 'b) : 'b =
-  match (ps0, ps) with
-  | _, [] -> ps0
-  | [], _ -> if strict then [] else ps
-  | t0 :: ts0', t :: ts' ->
-    ( match String.compare t0.name t.name with
-    | -1 -> t0 :: merge_property_lists ~strict ts0' ps
-    | 1 ->
-        if strict then merge_property_lists ~strict ps0 ts'
-        else t :: merge_property_lists ~strict ps0 ts'
-    | 0 -> merge_propertys t0 t :: merge_property_lists ~strict ts0' ts'
+and merge_property_lists ~strict (ps : property list as 'b) (ps0 : 'b) : 'b =
+  match (ps, ps0) with
+  | [], ps0 -> ps0
+  | ps, [] -> if strict then [] else ps
+  | t :: ts', t0 :: ts0' ->
+    ( match String.compare t.name t0.name with
+    | 1 -> t0 :: merge_property_lists ~strict ps ts0'
+    | -1 ->
+        if strict then merge_property_lists ~strict ts' ps0
+        else t :: merge_property_lists ~strict ts' ps0
+    | 0 -> merge_propertys t t0 :: merge_property_lists ~strict ts' ts0'
     | _ -> assert false )
 
 let make (type a) ~strict ~(property_lists : a -> property list list) : a t =
   ( module struct
     type t = a
 
+    let find k ps = List.find_opt (fun (p : property) -> p.name = k) ps
+
     let properties t =
       List.fold_left (merge_property_lists ~strict) [] (property_lists t)
 
     let get_property (k : string) (t : t) : property option =
-      let find k ps = List.find_opt (fun (p : property) -> p.name = k) ps in
-      match property_lists t with
-      | [] -> None
-      | plist :: plists ->
-        ( match (strict, find k plist) with
-        | true, None -> None
-        | _, p ->
-            List.fold_left
-              (fun p plist ->
-                match (p, find k plist) with
-                | p', None | None, p' -> p'
-                | Some p, Some p' -> Some (merge_propertys p p') )
-              p plists )
+      let rec aux plists p =
+        match plists with
+        | [] -> None
+        | plist :: plists ->
+          ( match aux plists p with
+          | None when strict && plists <> [] -> None
+          | p ->
+            ( match (find k plist, p) with
+            | p', None | None, p' -> p'
+            | Some p', Some p -> Some (merge_propertys p' p) ) ) in
+      aux (property_lists t) None
 
     let get_property_exn k t =
       match get_property k t with
+      | Some p -> p
+      | None -> Util.Error.not_found "property" k
+
+    let own_properties t =
+      match property_lists t with [] -> [] | ps :: _ -> ps
+
+    let get_own_property k t = find k (own_properties t)
+
+    let get_own_property_exn k t =
+      match get_own_property k t with
       | Some p -> p
       | None -> Util.Error.not_found "property" k
   end )

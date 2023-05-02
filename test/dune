@@ -8,8 +8,10 @@
   test_enum
   test_gid
   test_loader
+  test_object
   test_property)
  (modules
+  helpers
   test_color
   test_context
   test_conv
@@ -17,6 +19,7 @@
   test_enum
   test_gid
   test_loader
+  test_object
   test_property)
  (deps
   (glob_files_rec data/*))

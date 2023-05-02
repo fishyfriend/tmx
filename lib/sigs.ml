@@ -34,6 +34,10 @@ module type PropsT = sig
   val properties : t -> property list
   val get_property : string -> t -> property option
   val get_property_exn : string -> t -> property
+
+  val own_properties : t -> property list
+  val get_own_property : string -> t -> property option
+  val get_own_property_exn : string -> t -> property
 end
 
 module type ClassPropsT = sig
