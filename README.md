@@ -17,8 +17,6 @@ The XML-based map (.tmx), tileset (.tsx), and template (.tx) formats are
 supported along with the undocumented Custom Types JSON format. Support for the
 JSON map, tileset, and template formats is planned.
 
-The library should be considered alpha quality but usable.
-
 ## Installation
 
 `dune` and `opam` are required. Install the development version by checking out

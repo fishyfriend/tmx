@@ -1,6 +1,8 @@
 include Core_intf
 
 module Make (State : State) = struct
+  module UE = Util.Error
+
   open Util.Option.Infix
   open Types
   open State
@@ -92,9 +94,9 @@ module Make (State : State) = struct
     let property_lists t =
       get_std_plists ~class_ ~properties ~useas:`Property t
 
-    module P = (val Props.make ~strict:true ~property_lists)
+    let props = Props.make ~strict:true ~property_lists
 
-    include (P : Props.S with type t := t)
+    include ((val props) : Props.S with type t := t)
 
     let rec reloc ~from_dir ~to_dir t =
       let value =
@@ -135,20 +137,17 @@ module Make (State : State) = struct
     let bytes t = t.bytes
 
     let read_base64 s =
-      try Base64.decode_exn s
-      with Invalid_argument msg -> Util.Error.base64 msg
+      try Base64.decode_exn s with Invalid_argument msg -> UE.base64 msg
 
     let read_gzip s =
-      match Ezgzip.decompress s with
-      | Ok s -> s
-      | Error (`Gzip e) -> Util.Error.gzip e
+      match Ezgzip.decompress s with Ok s -> s | Error (`Gzip e) -> UE.gzip e
 
     let read_zlib s =
       match Ezgzip.Z.decompress ~header:true s with
       | Ok s -> s
-      | Error (`Zlib e) -> Util.Error.zlib e
+      | Error (`Zlib e) -> UE.zlib e
 
-    let read_zstd _ = Util.Error.zstd ()
+    let read_zstd _ = UE.zstd ()
 
     let read_csv s =
       let cells = String.split_on_char ',' s in
@@ -174,7 +173,7 @@ module Make (State : State) = struct
         | Some `Base64, Some `Zstd -> read_base64 s |> read_zstd
         | Some `Csv, None -> read_csv s
         | Some `Csv, Some c ->
-            Util.Error.invalid_arg "compression" (Compression.show c) in
+            UE.invalid_arg "compression" (Compression.show c) in
       let bytes = Bytes.unsafe_of_string s in
       make ?encoding ?compression bytes
 
@@ -359,9 +358,9 @@ module Make (State : State) = struct
       let class_props = class_ t >>= get_class_members ~useas:`Object |? [] in
       [own_props; template_props; tile_props; class_props]
 
-    module P = (val Props.make ~strict:false ~property_lists)
+    let props = Props.make ~strict:false ~property_lists
 
-    include (P : Props.S with type t := t)
+    include ((val props) : Props.S with type t := t)
 
     let reloc ~from_dir ~to_dir t =
       let template = t.template >|= Util.Filename.reloc ~from_dir ~to_dir in
@@ -383,8 +382,8 @@ module Make (State : State) = struct
     let data t = t.data
 
     let gid_at ~col ~row t =
-      if col >= width t then Util.Error.invalid_arg "col" (string_of_int col) ;
-      if row >= height t then Util.Error.invalid_arg "row" (string_of_int row) ;
+      if col >= width t then UE.invalid_arg "col" (string_of_int col) ;
+      if row >= height t then UE.invalid_arg "row" (string_of_int row) ;
       let i = col + (row * width t) in
       data t |> Data.bytes
       |> Fun.flip Bytes.get_int32_ne (i * 4)
@@ -431,8 +430,7 @@ module Make (State : State) = struct
     let get_object t id = Int_map.find_opt id t.objects
 
     let get_object_exn t id =
-      get_object t id >|? fun () ->
-      Util.Error.not_found "object" (string_of_int id)
+      get_object t id >|? fun () -> UE.not_found "object" (string_of_int id)
 
     let reloc ~from_dir ~to_dir t =
       {t with objects = Int_map.map (Object.reloc ~from_dir ~to_dir) t.objects}
@@ -546,12 +544,11 @@ module Make (State : State) = struct
       | _ -> None
 
     let get_object_exn t id =
-      get_object t id >|? fun () ->
-      Util.Error.not_found "object" (string_of_int id)
+      get_object t id >|? fun () -> UE.not_found "object" (string_of_int id)
 
-    module P = (val make_std_props ~class_ ~properties ~useas:`Layer)
+    let props = make_std_props ~class_ ~properties ~useas:`Layer
 
-    include (P : Props.S with type t := t)
+    include ((val props) : Props.S with type t := t)
   end
 
   type layer = Layer.t
@@ -597,9 +594,9 @@ module Make (State : State) = struct
     let width t = t.width >>? fun () -> image t >>= Image.width
     let height t = t.height >>? fun () -> image t >>= Image.height
 
-    module P = (val make_std_props ~class_ ~properties ~useas:`Tile)
+    let props = make_std_props ~class_ ~properties ~useas:`Tile
 
-    include (P : Props.S with type t := t)
+    include ((val props) : Props.S with type t := t)
 
     let reloc ~from_dir ~to_dir t =
       let properties =
@@ -780,12 +777,11 @@ module Make (State : State) = struct
     let get_tile t id = Int_map.find_opt id t.tiles
 
     let get_tile_exn t id =
-      get_tile t id >|? fun () ->
-      Util.Error.not_found "tile" (string_of_int id)
+      get_tile t id >|? fun () -> UE.not_found "tile" (string_of_int id)
 
-    module P = (val make_std_props ~class_ ~properties ~useas:`Tile)
+    let props = make_std_props ~class_ ~properties ~useas:`Tileset
 
-    include (P : Props.S with type t := t)
+    include ((val props) : Props.S with type t := t)
 
     let reloc ~from_dir ~to_dir t =
       { t with
@@ -879,8 +875,7 @@ module Make (State : State) = struct
       let () =
         if version < Util.min_format_version then
           let maj, min = version in
-          Util.Error.invalid_arg "version" (Format.sprintf "%d.%d" maj min)
-      in
+          UE.invalid_arg "version" (Format.sprintf "%d.%d" maj min) in
       let properties = properties >|= normalize_plist in
       let tilesets =
         (* Sort by firstgid descending! *)
@@ -888,12 +883,12 @@ module Make (State : State) = struct
           let cmp (a, _) (b, _) = Int.compare b a in
           List.sort_uniq cmp tilesets in
         if List.compare_lengths tilesets tilesets' = 0 then tilesets'
-        else Util.Error.invalid_arg "tilesets" "firstgid not unique" in
+        else UE.invalid_arg "tilesets" "firstgid not unique" in
       let layers =
         let cmp l l' = Int.compare (Layer.id l) (Layer.id l') in
         let layers' = List.sort_uniq cmp layers in
         if List.compare_lengths layers layers' = 0 then layers'
-        else Util.Error.invalid_arg "layers" "id not unique" in
+        else UE.invalid_arg "layers" "id not unique" in
       make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
         ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
         ?backgroundcolor ?infinite ?properties ~tilesets ~layers ~geometry ()
@@ -937,18 +932,16 @@ module Make (State : State) = struct
       aux (layers t)
 
     let get_layer_exn t id =
-      get_layer t id >|? fun () ->
-      Util.Error.not_found "layer" (string_of_int id)
+      get_layer t id >|? fun () -> UE.not_found "layer" (string_of_int id)
 
     let objects t = List.concat_map Layer.objects (layers t)
     let get_object t id = List.find_opt (fun o -> Object.id o = id) (objects t)
     let get_object_exn t id =
-      get_object t id >|? fun () ->
-      Util.Error.not_found "object" (string_of_int id)
+      get_object t id >|? fun () -> UE.not_found "object" (string_of_int id)
 
-    module P = (val make_std_props ~class_ ~properties ~useas:`Tile)
+    let props = make_std_props ~class_ ~properties ~useas:`Map
 
-    include (P : Props.S with type t := t)
+    include ((val props) : Props.S with type t := t)
 
     let reloc ~from_dir ~to_dir t =
       let properties =
@@ -974,7 +967,7 @@ module Make (State : State) = struct
 
     let make ?tileset object_ =
       match Object.template object_ with
-      | Some _ -> Util.Error.nested_template ()
+      | Some _ -> UE.nested_template ()
       | None -> {tileset; object_}
 
     let tileset t = t.tileset
@@ -1012,7 +1005,7 @@ module Make (State : State) = struct
     [@@deriving eq, ord, show {with_path = false}]
 
     let make ~useas ~members =
-      if useas = [] then Util.Error.invalid_arg "useas" "[]" ;
+      if useas = [] then UE.invalid_arg "useas" "[]" ;
       let members = normalize_plist members in
       {useas; members}
 
@@ -1114,7 +1107,7 @@ module Make (State : State) = struct
     let wrap f t v =
       match f t v with
       | Some x -> x
-      | _ -> Util.Error.invalid_arg "value" (Property.Value.show v)
+      | _ -> UE.invalid_arg "value" (Property.Value.show v)
 
     let read_as_int_exn t v = wrap read_as_int t v
     let read_as_string_exn t v = wrap read_as_string t v

@@ -1,4 +1,6 @@
 module type S = sig
+  (** {1 Core types} *)
+
   module Core : Core.S
 
   (** @inline *)
@@ -35,8 +37,8 @@ module type S = sig
 
   (** {1 Querying loaded resources}
 
-      String arguments and alist keys refer to the name of the source file, {b
-      not} the value of the resource's [name] field (if one exists). *)
+      These resources are keyed by source filename, {b not} the value of the
+      resource's [name] field (if one exists). *)
 
   val tilesets : unit -> (string * Tileset.t) list
   val templates : unit -> (string * Template.t) list
@@ -73,7 +75,7 @@ module type S = sig
 
       Custom types work differently from other loadable resources. They are
       never auto-loaded and, once loaded, they are accessed by name (as returned
-      by {!Customtype.name}) rather than by the name of the source file.
+      by {!Customtype.name}) rather than by source filename.
 
       Multiple custom types with the same name are permitted so long as their
       {!val:Class.useas} fields don't conflict. For this purpose, enums are
