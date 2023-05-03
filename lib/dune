@@ -1,7 +1,7 @@
 (library
  (name tmx)
  (public_name tmx)
- (libraries base64 bigstringaf ezgzip ezjsonm ezxmlm)
+ (libraries base64 ezgzip ezjsonm ezxmlm)
  (preprocess
   (pps ppx_deriving.eq ppx_deriving.make ppx_deriving.ord ppx_deriving.show))
  (modules

@@ -21,6 +21,7 @@ module type Aux = sig
   val reloc_customtype :
     from_dir:string -> to_dir:string -> customtype -> customtype
 
+  (* WARNING: this mutates the map data. Use with care, only during loading. *)
   val map_map_gids : (Gid.t -> Gid.t) -> map -> map
   val template_map_gids : (Gid.t -> Gid.t) -> template -> template
 end

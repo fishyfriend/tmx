@@ -115,7 +115,7 @@ end
 type t = (module S)
 
 module type Intf = sig
-  (** The entrypoint for loading and accessing TMX data.
+  (** The entry point for loading and accessing TMX data.
 
       Typical usage looks like:
 
@@ -143,7 +143,7 @@ module type Intf = sig
       [a/b/tileset.tsx] is rewritten to [a/sprite.png]. This avoids the need to
       traverse nested data structures to calculate the full path.
 
-      Second, within a map or template, the loader rewrites all tile GIDs to be
+      Second, within a map or template, the loader rewrites all tile GIDs to
       point into a table of all loaded tilesets rather than just those used by
       the containing map or template. This allows tile GIDs from different maps
       to be treated interchangeably even if those maps use different tilesets.
