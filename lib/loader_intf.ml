@@ -122,13 +122,18 @@ module type Intf = sig
       {[let loader = Loader.make ~root:"path/to/my/game" () in
         let module L = (val loader) in
         let m = L.load_map_xml_exn "level1.tmx" in
+        let open L.Core in (* alternative: let open L in *)
         (* ... *)
       ]}
 
-      A loader provides both a stateful context for loading TMX resources and a
-      collection of immutable OCaml types representing TMX data types. Each type
-      is paired with a submodule ([Map], [Object], etc.) providing accessors and
-      other functions.
+      A loader provides a stateful context for loading TMX resource files and a
+      collection of immutable "core types" representing TMX data types. Each
+      core type is paired with a submodule [Map], [Object], etc. providing
+      accessors and other functions.
+
+      The core types can be brought into scope by opening the [Core] module or
+      by opening the loader directly. The former is usually preferable as it
+      avoids cluttering the namespace with unprefixed loader functions.
 
       {2 Transformations}
 
@@ -147,7 +152,7 @@ module type Intf = sig
 
       The functions on TMX data types simulate the semantics of the equivalent
       data types in the Tiled desktop application, notably by providing tile GID
-      and custom property lookups based on the current loader context.
+      and custom property lookups based on the current loader state.
 
       This convenience comes with the caveat that accessor functions may return
       different values after the loader state changes. For example, if loading a
@@ -178,7 +183,6 @@ module type Intf = sig
   (** {2 API} *)
 
   module type S = sig
-    (* TODO: This should make doc for [S] appear inline, but doesn't *)
     include S  (** @open *)
   end
 

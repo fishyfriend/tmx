@@ -1,11 +1,11 @@
 open Util.Option.Infix
 open Types
 
-module type S = Sigs.PropsT with type property := property
+module type S = Sigs.PropsT with type property := Types.property
 
 type 'a t = (module S with type t = 'a)
 
-let rec merge_propertys (p : property) (p0 : property) : property =
+let rec merge_propertys (p : property as 'a) (p0 : 'a) : 'a =
   let propertytype = p.propertytype >>? fun () -> p0.propertytype in
   let value =
     match (p.value, p0.value) with
@@ -38,6 +38,16 @@ let make (type a) ~strict ~(property_lists : a -> property list list) : a t =
 
     let find k ps = List.find_opt (fun (p : property) -> p.name = k) ps
 
+    let own_properties t =
+      match property_lists t with [] -> [] | ps :: _ -> ps
+
+    let get_own_property k t = find k (own_properties t)
+
+    let get_own_property_exn k t =
+      match get_own_property k t with
+      | Some p -> p
+      | None -> Util.Error.not_found "property" k
+
     let properties t =
       List.fold_left (merge_property_lists ~strict) [] (property_lists t)
 
@@ -56,16 +66,6 @@ let make (type a) ~strict ~(property_lists : a -> property list list) : a t =
 
     let get_property_exn k t =
       match get_property k t with
-      | Some p -> p
-      | None -> Util.Error.not_found "property" k
-
-    let own_properties t =
-      match property_lists t with [] -> [] | ps :: _ -> ps
-
-    let get_own_property k t = find k (own_properties t)
-
-    let get_own_property_exn k t =
-      match get_own_property k t with
       | Some p -> p
       | None -> Util.Error.not_found "property" k
   end )

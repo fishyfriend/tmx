@@ -6,9 +6,10 @@
 open Tmx__
 
 module Core = Core.Make (struct
-  include Core.Simple
-
+  open Core.Simple
   open Helpers.Simple
+
+  include Aux
 
   let template =
     Template.make

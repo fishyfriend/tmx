@@ -17,4 +17,4 @@ val to_string_rgb : t -> string
 val trans : t
 val black : t
 
-include Sigs.StdT with type t := t
+include Sigs.StdT with type t := t  (** @closed *)

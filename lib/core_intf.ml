@@ -1,4 +1,4 @@
-module type Getters = sig
+module type State = sig
   val get_tileset : string -> Types.tileset option
   val get_template : string -> Types.template option
   val get_customtypes : string -> Types.customtype list
@@ -9,6 +9,11 @@ end
 
 module type Aux = sig
   open Types
+
+  include State
+
+  val get_class : string -> useas:useas -> class_ option
+  val get_enum : string -> enum option
 
   val reloc_tileset : from_dir:string -> to_dir:string -> tileset -> tileset
   val reloc_map : from_dir:string -> to_dir:string -> map -> map
@@ -21,15 +26,57 @@ module type Aux = sig
 end
 
 module type S = sig
-  module Error : module type of Error
+  type property
+
+  module type ClassPropsT = sig
+    type t
+
+    include Sigs.ClassT with type t := t
+    include Sigs.PropsT with type t := t and type property := property
+  end
+
+  module type StdT = Sigs.StdT
+
+  module Property : sig
+    type t = property
+
+    module Value : sig
+      type property := t
+
+      type t =
+        [ `String of string
+        | `Int of int
+        | `Float of float
+        | `Bool of bool
+        | `Color of Color.t
+        | `File of string
+        | `Object of int
+        | `Class of property list ]
+
+      include StdT with type t := t (** @closed *)
+    end
+
+    type value = Value.t
+
+    val make :
+      name:string -> ?propertytype:string -> value:Value.t -> unit -> t
+    val name : t -> string
+    val propertytype : t -> string option
+    val value : t -> Value.t
+
+    include StdT with type t := t (** @closed *)
+    include ClassPropsT with type t := t (** @closed *)
+  end
+
+  module Error = Error
 
   type error = Error.t
 
-  module Color : module type of Color
+  module Color = Color
 
   type color = Color.t
 
-  module Gid : module type of Gid
+  module Gid = Gid
 
   type gid = Gid.t
 
@@ -37,7 +84,7 @@ module type S = sig
     module Encoding : sig
       type t = [`Base64 | `Csv]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type encoding = Encoding.t
@@ -45,7 +92,7 @@ module type S = sig
     module Compression : sig
       type t = [`Gzip | `Zlib | `Zstd]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type compression = Compression.t
@@ -65,7 +112,7 @@ module type S = sig
       ?encoding:encoding -> ?compression:compression -> string -> t
     val of_int32_list : int32 list -> t
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type data = Data.t
@@ -74,7 +121,7 @@ module type S = sig
     module Format : sig
       type t = [`Bmp | `Gif | `Jpg | `Png]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type format = Format.t
@@ -82,7 +129,7 @@ module type S = sig
     module Source : sig
       type t = [`File of string | `Embed of Format.t * Data.t]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type source = Source.t
@@ -102,43 +149,10 @@ module type S = sig
     val width : t -> int option
     val height : t -> int option
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type image = Image.t
-
-  module Property : sig
-    type t
-
-    module Value : sig
-      type property := t
-
-      type t =
-        [ `String of string
-        | `Int of int
-        | `Float of float
-        | `Bool of bool
-        | `Color of Color.t
-        | `File of string
-        | `Object of int
-        | `Class of property list ]
-
-      include Sigs.StdT with type t := t
-    end
-
-    type value = Value.t
-
-    val make :
-      name:string -> ?propertytype:string -> value:Value.t -> unit -> t
-    val name : t -> string
-    val propertytype : t -> string option
-    val value : t -> Value.t
-
-    include Sigs.StdT with type t := t
-    include Sigs.ClassPropsT with type t := t and type property := t
-  end
-
-  type property = Property.t
 
   module Object : sig
     module Text : sig
@@ -184,7 +198,7 @@ module type S = sig
       val halign : t -> halign
       val valign : t -> valign
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type text = Text.t
@@ -199,7 +213,7 @@ module type S = sig
         | `Text of Text.t
         | `Tile of Gid.t ]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type shape = Shape.t
@@ -233,8 +247,8 @@ module type S = sig
     val width : t -> float
     val height : t -> float
 
-    include Sigs.StdT with type t := t
-    include Sigs.ClassPropsT with type t := t and type property := Property.t
+    include StdT with type t := t (** @closed *)
+    include ClassPropsT with type t := t (** @closed *)
 
     (** Get an object's "raw" class.
 
@@ -253,7 +267,7 @@ module type S = sig
       val tileid : t -> int
       val duration : t -> int
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type frame = Frame.t
@@ -289,8 +303,8 @@ module type S = sig
         tileset grid image. *)
     val image : t -> Image.t option
 
-    include Sigs.StdT with type t := t
-    include Sigs.ClassPropsT with type t := t and type property := Property.t
+    include StdT with type t := t (** @closed *)
+    include ClassPropsT with type t := t (** @closed *)
   end
 
   type tile = Tile.t
@@ -306,7 +320,7 @@ module type S = sig
     val gid_at : col:int -> row:int -> t -> Gid.t
     val tile_at : col:int -> row:int -> t -> Tile.t option
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type tilelayer = Tilelayer.t
@@ -315,7 +329,7 @@ module type S = sig
     module Draworder : sig
       type t = [`Topdown | `Index]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type draworder = Draworder.t
@@ -328,7 +342,7 @@ module type S = sig
     val get_object : t -> int -> Object.t option
     val get_object_exn : t -> int -> Object.t
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type objectgroup = Objectgroup.t
@@ -341,7 +355,7 @@ module type S = sig
     val repeatx : t -> bool
     val repeaty : t -> bool
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type imagelayer = Imagelayer.t
@@ -358,7 +372,7 @@ module type S = sig
         | `Imagelayer of Imagelayer.t
         | `Group of layer list ]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type variant = Variant.t
@@ -394,15 +408,15 @@ module type S = sig
     val get_object : t -> int -> Object.t option
     val get_object_exn : t -> int -> Object.t
 
-    include Sigs.StdT with type t := t
-    include Sigs.ClassPropsT with type t := t and type property := Property.t
+    include StdT with type t := t (** @closed *)
+    include ClassPropsT with type t := t (** @closed *)
   end
 
   type layer = Layer.t
 
   module Tileset : sig
     module Tileoffset : sig
-      include Sigs.StdT
+      include StdT (** @closed *)
 
       val make : ?x:int -> ?y:int -> unit -> t
       val x : t -> int
@@ -414,7 +428,7 @@ module type S = sig
     module Single : sig
       type t
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
 
       val make :
         tilecount:int ->
@@ -448,7 +462,7 @@ module type S = sig
         | `Bottom
         | `Bottomright ]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type objectalignment = Objectalignment.t
@@ -456,7 +470,7 @@ module type S = sig
     module Tilerendersize : sig
       type t = [`Tile | `Grid]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type tilerendersize = Tilerendersize.t
@@ -464,7 +478,7 @@ module type S = sig
     module Fillmode : sig
       type t = [`Stretch | `Preserve_aspect_fit]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type fillmode = Fillmode.t
@@ -472,7 +486,7 @@ module type S = sig
     module Grid : sig
       type t = [`Orthogonal | `Isometric of int * int]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type grid = Grid.t
@@ -480,7 +494,7 @@ module type S = sig
     module Variant : sig
       type t = [`Single of Single.t | `Collection]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type variant = Variant.t
@@ -517,8 +531,8 @@ module type S = sig
     (** Return the largest tile ID present in this tileset. *)
     val max_tile_id : t -> int
 
-    include Sigs.StdT with type t := t
-    include Sigs.ClassPropsT with type t := t and type property := Property.t
+    include StdT with type t := t (** @closed *)
+    include ClassPropsT with type t := t (** @closed *)
   end
 
   type tileset = Tileset.t
@@ -527,7 +541,7 @@ module type S = sig
     module Staggeraxis : sig
       type t = [`X | `Y]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type staggeraxis = Staggeraxis.t
@@ -535,13 +549,13 @@ module type S = sig
     module Staggerindex : sig
       type t = [`Even | `Odd]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type staggerindex = Staggerindex.t
 
     module Staggered : sig
-      include Sigs.StdT
+      include StdT (** @closed *)
 
       val make : staggeraxis:staggeraxis -> staggerindex:staggerindex -> t
       val staggeraxis : t -> Staggeraxis.t
@@ -571,7 +585,7 @@ module type S = sig
     module Renderorder : sig
       type t = [`Left_down | `Left_up | `Right_down | `Right_up]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type renderorder = Renderorder.t
@@ -634,8 +648,8 @@ module type S = sig
     val get_object : t -> int -> Object.t option
     val get_object_exn : t -> int -> Object.t
 
-    include Sigs.StdT with type t := t
-    include Sigs.ClassPropsT with type t := t and type property := Property.t
+    include StdT with type t := t (** @closed *)
+    include ClassPropsT with type t := t (** @closed *)
   end
 
   type map = Map.t
@@ -647,7 +661,7 @@ module type S = sig
     val tileset : t -> (int * string) option
     val object_ : t -> Object.t
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type template = Template.t
@@ -666,7 +680,7 @@ module type S = sig
         | `Wangcolor
         | `Wangset ]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type useas = Useas.t
@@ -675,7 +689,7 @@ module type S = sig
     val useas : t -> Useas.t list
     val members : t -> Property.t list
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type class_ = Class.t
@@ -684,7 +698,7 @@ module type S = sig
     module Storagetype : sig
       type t = [`Int | `String]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type storagetype = Storagetype.t
@@ -704,7 +718,7 @@ module type S = sig
     val read_as_int_exn : t -> Property.Value.t -> int
     val read_as_alist_exn : t -> Property.Value.t -> (string * bool) list
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type enum = Enum.t
@@ -713,7 +727,7 @@ module type S = sig
     module Variant : sig
       type t = [`Class of Class.t | `Enum of Enum.t]
 
-      include Sigs.StdT with type t := t
+      include StdT with type t := t (** @closed *)
     end
 
     type variant = Variant.t
@@ -725,47 +739,45 @@ module type S = sig
     val name : t -> string
     val variant : t -> Variant.t
 
-    include Sigs.StdT with type t := t
+    include StdT with type t := t (** @closed *)
   end
 
   type customtype = Customtype.t
-
-  include Getters
-
-  val get_class : string -> useas:Class.useas -> class_ option
-  val get_enum : string -> enum option
 end
 
-module type S_generic =
-  S
-    with type Property.t = Types.property
-     and type Data.t = Types.data
-     and type Image.t = Types.image
-     and type Object.Text.t = Types.text
-     and type Object.t = Types.object_
-     and type Tilelayer.t = Types.tilelayer
-     and type Objectgroup.t = Types.objectgroup
-     and type Imagelayer.t = Types.imagelayer
-     and type Layer.t = Types.layer
-     and type Tile.Frame.t = Types.frame
-     and type Tile.t = Types.tile
-     and type Tileset.Tileoffset.t = Types.tileoffset
-     and type Tileset.Single.t = Types.single
-     and type Tileset.t = Types.tileset
-     and type Map.Staggered.t = Types.staggered
-     and type Map.Hexagonal.t = Types.hexagonal
-     and type Map.t = Types.map
-     and type Template.t = Types.template
-     and type Class.t = Types.class_
-     and type Enum.t = Types.enum
-     and type Customtype.t = Types.customtype
+module type S_generic = sig
+  include
+    S
+      with type property = Types.property
+       and type Data.t = Types.data
+       and type Image.t = Types.image
+       and type Object.Text.t = Types.text
+       and type Object.t = Types.object_
+       and type Tilelayer.t = Types.tilelayer
+       and type Objectgroup.t = Types.objectgroup
+       and type Imagelayer.t = Types.imagelayer
+       and type Layer.t = Types.layer
+       and type Tile.Frame.t = Types.frame
+       and type Tile.t = Types.tile
+       and type Tileset.Tileoffset.t = Types.tileoffset
+       and type Tileset.Single.t = Types.single
+       and type Tileset.t = Types.tileset
+       and type Map.Staggered.t = Types.staggered
+       and type Map.Hexagonal.t = Types.hexagonal
+       and type Map.t = Types.map
+       and type Template.t = Types.template
+       and type Class.t = Types.class_
+       and type Enum.t = Types.enum
+       and type Customtype.t = Types.customtype
+
+  module Aux : Aux
+end
 
 module type Intf = sig
-  module type Getters = Getters
+  module type State = State
   module type S = S
   module type S_generic = S_generic
 
-  module Make (_ : Getters) : S_generic
+  module Make (_ : State) : S_generic
   module Simple : S_generic
-  module Aux : Aux
 end

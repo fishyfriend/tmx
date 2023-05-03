@@ -22,7 +22,7 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
         context := old_context ;
         raise exn
 
-    module Getters : Core.Getters = struct
+    module State : Core.State = struct
       let get_tileset k = C.get_tileset k !context |> Option.map snd
       let get_template k = C.get_template k !context
       let get_customtypes k = C.get_customtypes k !context
@@ -31,10 +31,10 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
       let get_tile gid = C.get_tile gid !context
     end
 
-    module Aux = Core.Aux
-    module Core = Core.Make (Getters)
+    module Core = Core.Make (State)
 
     include Core
+    include Aux
 
     let tilesets () = List.map (fun (_, k, v) -> (k, v)) (C.tilesets !context)
 

@@ -1,10 +1,9 @@
 include Core_intf
 
-module Make (Getters : Getters) = struct
+module Make (State : State) = struct
   open Util.Option.Infix
   open Types
-
-  include Getters
+  open State
 
   let get_class k ~useas =
     List.find_map
@@ -34,6 +33,15 @@ module Make (Getters : Getters) = struct
   let make_std_props ~class_ ~properties ~useas =
     let property_lists x = get_std_plists ~class_ ~properties ~useas x in
     Props.make ~strict:false ~property_lists
+
+  module type StdT = Sigs.StdT
+
+  module type ClassPropsT = sig
+    type t
+
+    include Sigs.ClassT with type t := t
+    include Sigs.PropsT with type t := t and type property := property
+  end
 
   module Int_map = Stdlib.Map.Make (Int)
 
@@ -1140,13 +1148,20 @@ module Make (Getters : Getters) = struct
 
   type customtype = Customtype.t
 
-  let reloc_tileset = Tileset.reloc
-  let reloc_map = Map.reloc
-  let reloc_template = Template.reloc
-  let reloc_customtype = Customtype.reloc
+  module Aux = struct
+    include State
 
-  let map_map_gids = Map.map_gids
-  let template_map_gids = Template.map_gids
+    let get_class = get_class
+    let get_enum = get_enum
+
+    let reloc_tileset = Tileset.reloc
+    let reloc_map = Map.reloc
+    let reloc_template = Template.reloc
+    let reloc_customtype = Customtype.reloc
+
+    let map_map_gids = Map.map_gids
+    let template_map_gids = Template.map_gids
+  end
 end
 
 module Simple = Make (struct
@@ -1157,5 +1172,3 @@ module Simple = Make (struct
   let get_file _ = None
   let get_tile _ = None
 end)
-
-module Aux = Simple

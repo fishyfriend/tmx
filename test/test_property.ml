@@ -6,23 +6,24 @@
 open Tmx__
 
 module Core = Core.Make (struct
-  include Core.Simple
+  open Core.Simple
+  open Helpers.Simple
+
+  include Aux
 
   let customtypes =
-    Helpers.Simple.
-      [ class_ "c1" [`Property]
-          [ prop "c1p1" (`Int 777); prop "c1p2" (`Float 1.23);
-            prop "c1p3" (`Int 456) ];
-        class_ "c2" [`Property]
-          [ prop "c2p1" (`String "klm"); prop "c2p2" (`Object 5);
-            prop' "c2p3" "c1"
-              (`Class [prop "c1p2" (`Float 7.89); prop "c1p3" (`Float 654.)])
-          ];
-        class_ "c3" [`Property]
-          [ prop' "c3p1" "c2"
-              (`Class
-                [ prop "c2p2" (`Float 6.);
-                  prop "c2p3" (`Class [prop "c1p3" (`Float 543.)]) ] ) ] ]
+    [ class_ "c1" [`Property]
+        [ prop "c1p1" (`Int 777); prop "c1p2" (`Float 1.23);
+          prop "c1p3" (`Int 456) ];
+      class_ "c2" [`Property]
+        [ prop "c2p1" (`String "klm"); prop "c2p2" (`Object 5);
+          prop' "c2p3" "c1"
+            (`Class [prop "c1p2" (`Float 7.89); prop "c1p3" (`Float 654.)]) ];
+      class_ "c3" [`Property]
+        [ prop' "c3p1" "c2"
+            (`Class
+              [ prop "c2p2" (`Float 6.);
+                prop "c2p3" (`Class [prop "c1p3" (`Float 543.)]) ] ) ] ]
 
   let get_customtypes k =
     List.filter (fun ct -> Customtype.name ct = k) customtypes

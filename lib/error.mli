@@ -11,6 +11,6 @@ type t =
   | `Not_found of string * string
   | `Other of exn ]
 
-include Sigs.StdT with type t := t
+include Sigs.StdT with type t := t  (** @closed *)
 
 type exn += Error of t

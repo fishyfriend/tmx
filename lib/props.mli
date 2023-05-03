@@ -1,10 +1,10 @@
-(* Helpers for implementing property lookup *)
+(* Helpers for implementing class and property lookup *)
 
 module type S = Sigs.PropsT with type property := Types.property
 
 type 'a t = (module S with type t = 'a)
 
-(* Create property accessors.
+(* Create accessors.
 
    [property_lists] gives the lists of properties that should be inherited
    from. Lists to the left take priority.
