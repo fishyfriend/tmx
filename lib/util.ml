@@ -10,6 +10,39 @@ module Option = struct
   end
 end
 
+module Filename = struct
+  let split path =
+    assert (String.length Filename.dir_sep = 1) ;
+    String.split_on_char Filename.dir_sep.[0] path
+
+  let join parts = List.fold_left Filename.concat "" parts
+
+  let fixup parts =
+    List.fold_left
+      (fun parts part ->
+        if part = "" || part = Filename.current_dir_name then parts
+        else if part = Filename.parent_dir_name then
+          match parts with [] -> part :: parts | _ :: parts -> parts
+        else part :: parts )
+      [] parts
+    |> List.rev
+
+  let canon path =
+    let path' = split path |> fixup |> join in
+    if Filename.is_relative path then path'
+    else Filename.(concat dir_sep) path'
+
+  let reloc ~from_dir ~to_dir path =
+    let path = Filename.concat from_dir path in
+    let xs, ys = (fixup (split path), fixup (split to_dir)) in
+    let rec aux xs ys =
+      match (xs, ys) with
+      | x :: xs, y :: ys when x = y -> aux xs ys
+      | xs, _ :: ys -> Filename.parent_dir_name :: aux xs ys
+      | xs, [] -> xs in
+    join (aux xs ys)
+end
+
 module Error = struct
   let protect f x =
     try Result.ok (f x) with
@@ -27,31 +60,8 @@ module Error = struct
   let zstd () = throw (`Zstd "Zstd compression not implemented")
   let duplicate kind name = throw (`Duplicate (kind, name))
   let not_found kind name = throw (`Not_found (kind, name))
+  let file_not_found name = not_found "file" (Filename.canon name)
   let other exn = throw (`Other exn)
-end
-
-module Filename = struct
-  let split path =
-    assert (String.length Filename.dir_sep = 1) ;
-    String.split_on_char Filename.dir_sep.[0] path
-    |> List.fold_left
-         (fun parts part ->
-           if part = "" || part = Filename.current_dir_name then parts
-           else if part = Filename.parent_dir_name then
-             match parts with [] -> part :: parts | _ :: parts -> parts
-           else part :: parts )
-         []
-    |> List.rev
-
-  let reloc ~from_dir ~to_dir path =
-    let path = Filename.concat from_dir path in
-    let xs, ys = (split path, split to_dir) in
-    let rec aux xs ys =
-      match (xs, ys) with
-      | x :: xs, y :: ys when x = y -> aux xs ys
-      | xs, _ :: ys -> Filename.concat ".." (aux xs ys)
-      | xs, [] -> List.fold_left Filename.concat "" xs in
-    aux xs ys
 end
 
 let min_format_version = (1, 10)

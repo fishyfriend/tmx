@@ -23,11 +23,12 @@ module Error : sig
   val zstd : unit -> _
   val duplicate : string -> string -> _
   val not_found : string -> string -> _
+  val file_not_found : string -> _
   val other : exn -> _
 end
 
 module Filename : sig
-  val split : string -> string list
+  val canon : string -> string
   val reloc : from_dir:string -> to_dir:string -> string -> string
 end
 

@@ -1,8 +1,3 @@
-(* Property inheritance.
-
-   This serves as a test of strict inheritance logic ([Props.make
-   ~strict:true]). *)
-
 open Tmx__
 
 module Core = Core.Make (struct

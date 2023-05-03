@@ -12,7 +12,7 @@
 
 (package
  (name tmx)
- (synopsis "Tiled XML loader for OCaml")
+ (synopsis "Tiled TMX loader for OCaml")
  (depends
   (ocaml
    (and

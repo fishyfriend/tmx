@@ -4,22 +4,20 @@
 [Tiled][tiled].
 
 The library aims for broad coverage of Tiled's [TMX file formats][tmx]. It
-provides an imperative context for loading TMX data files, a collection of
-immutable types corresponding to TMX data structures, and a suite of functions
-for working with those types.
+provides a context for loading TMX data files, a collection of immutable types
+correponding to TMX data structures, and a suite of functions for working with
+them.
 
-The auxiliary functions emulate the semantics of various TMX structures as they
-exist in the Tiled desktop application, including [custom property][properties]
-inheritance and the application of [object templates][templates]. This allows
-the attributes of TMX structures in OCaml to match exactly what is observed in
-Tiled.
+`tmx` emulates the semantics of TMX structures as they exist in the Tiled
+desktop application, including [custom property][properties] inheritance and the
+application of [object templates][templates]. This allows the attributes of game
+resources in OCaml to match what is observed in Tiled.
 
 The XML-based map (.tmx), tileset (.tsx), and template (.tx) formats are
 supported along with the undocumented Custom Types JSON format. Support for the
 JSON map, tileset, and template formats is planned.
 
-The library should be considered alpha quality but usable. No major API changes
-are currently planned.
+The library should be considered alpha quality but usable.
 
 ## Installation
 
@@ -27,8 +25,7 @@ are currently planned.
 source code then running `opam update && opam install .` from the source
 directory.
 
-The library will hopefully be published to the main `opam` repository in the
-future.
+`tmx` will hopefully be published to the main `opam` repository in the future.
 
 ## Documentation
 
@@ -37,8 +34,9 @@ build @doc`. The generated HTML landing page is
 `_build/default/_doc/_html/index.html`.
 
 The most important documentation is for the `Loader` module. For the TMX types,
-one can generally consult the official [TMX format documentation][tmx]; the API
-corresponds closely with it, and most differences are self-explanatory.
+one can generally consult the official [TMX format documentation][tmx]; the
+library API corresponds closely with it, and most differences are
+self-explanatory.
 
 ## Features
 
