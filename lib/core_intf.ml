@@ -319,7 +319,7 @@ module type S = sig
     val data : t -> Data.t
 
     val gid_at : col:int -> row:int -> t -> Gid.t
-    val tile_at : col:int -> row:int -> t -> Tile.t option
+    val tile_at : col:int -> row:int -> t -> (Tile.t * Gid.Flags.t) option
 
     include StdT with type t := t (** @closed *)
   end

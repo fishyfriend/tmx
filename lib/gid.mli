@@ -14,6 +14,8 @@ module Flags : sig
   include Sigs.StdT with type t := t  (** @closed *)
 end
 
+type flags = Flags.t
+
 type t
 
 val make : ?flags:Flags.t -> int -> t

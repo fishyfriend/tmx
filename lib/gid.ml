@@ -11,6 +11,8 @@ module Flags = struct
   let empty = 0l
 end
 
+type flags = Flags.t
+
 type t = int32 [@@deriving eq, show {with_path = false}]
 
 let max_id = Int32.(lognot Flags.all |> to_int)

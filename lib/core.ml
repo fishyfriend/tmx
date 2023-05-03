@@ -392,7 +392,8 @@ module Make (State : State) = struct
 
     let tile_at ~col ~row t =
       let gid = gid_at ~col ~row t in
-      if Gid.id gid = 0 then None else get_tile gid
+      if Gid.id gid = 0 then None
+      else get_tile gid >|= fun tile -> (tile, Gid.flags gid)
 
     let map_gids_inplace f t : unit =
       let bytes = Data.bytes t.data in
