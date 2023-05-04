@@ -4,9 +4,9 @@
 [Tiled][tiled].
 
 The library aims for broad coverage of Tiled's [TMX file formats][tmx]. It
-provides a context for loading TMX data files, a collection of immutable types
-correponding to TMX data structures, and a suite of functions for working with
-them.
+provides an imperative context for loading TMX data files, a collection of
+immutable types correponding to TMX data structures, and a suite of functions
+for working with them.
 
 `tmx` emulates the semantics of TMX structures as they exist in the Tiled
 desktop application, including proper application of [custom
@@ -20,11 +20,10 @@ format. Support for the JSON map, tileset, and template formats is planned.
 
 ## Installation
 
-`dune` and `opam` are required. Install the development version by checking out
-source code then running `opam update && opam install .` from the source
-directory.
-
 `tmx` will hopefully be published to the main `opam` repository in the future.
+Till then, install the development version with:
+
+    opam pin tmx https://github.com/fishyfriend/tmx.git
 
 ## Documentation
 
@@ -39,12 +38,13 @@ self-explanatory.
 
 ## Features
 
-  - Read maps, tilesets, and object templates from latest Tiled version (1.10)
-  - Automatically load TMX dependencies
-  - Optionally check for the presence of image files
+  - Read maps, tilesets, templates, and custom property definitions
+  - Automatically load dependencies
+  - Check for missing image files
   - Read custom class and enum properties
-  - Apply the Tiled application's rules for class and property inheritance
-  - Automatically calculate the position and dimensions of tile subimages
+  - Apply Tiled domain logic for property inheritance
+  - Apply object templates
+  - Compute the position and dimensions of tile subimages
   - Access embedded image data
   - See nice parse errors (in case you hand-write your XML)
 
@@ -66,10 +66,12 @@ self-explanatory.
 
 ## Example
 
-If you have checked out the source, run `utop` from the source directory and do
-`#require "tmx";;`. Then you can paste in this example and run it.
+Check out the source and run `utop` from the top-level directory. Then you can
+paste in this example and run it.
 
 ```ocaml
+#require "tmx";;
+
 open Tmx ;;
 
 module L = (val Loader.make ~root:"test/data" ()) ;;
@@ -118,7 +120,7 @@ let () =
   for col = 0 to Tilelayer.width tl - 1 do
     for row = 0 to Tilelayer.height tl - 1 do
       match Tilelayer.tile_at tl ~col ~row with
-      | Some tile when Tile.get_property "baz" tile <> None ->
+      | Some (tile, _flags) when Tile.get_property "baz" tile <> None ->
         Printf.printf "baz found at col %d, row %d\n" col row
       | _ -> ()
     done
@@ -129,7 +131,7 @@ let () =
 
 let () =
   let col, row = 12, 15 in
-  let tile = Option.get (Tilelayer.tile_at tl ~col ~row) in
+  let tile, _flags = Option.get (Tilelayer.tile_at tl ~col ~row) in
   match Property.value (Tile.get_property_exn "baz" tile) with
   | `File fname ->
     let msg = String.trim (L.get_file_exn fname) in
