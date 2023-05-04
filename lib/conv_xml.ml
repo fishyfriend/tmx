@@ -330,10 +330,6 @@ let template_of_xml xml =
   let object_ = child "object" xml object_of_xml in
   Template.make ?tileset object_
 
-let version_of_string s =
-  try Scanf.sscanf s "%d.%d" @@ fun x y -> (x, y)
-  with _ -> Util.Error.invalid_arg "version" s
-
 let tilelayer_of_xml xml =
   let width = attr "width" xml int_of_string in
   let height = attr "height" xml int_of_string in
@@ -445,8 +441,6 @@ let map_tileset_of_xml xml =
         "Missing attribute \"source\" (embedded tilesets are not supported)"
 
 let map_of_xml xml =
-  let version = attr "version" xml version_of_string in
-  let tiledversion = attr_opt' "tiledversion" xml in
   let class_ = attr_opt' "class" xml in
   let renderorder = attr_opt "renderorder" xml renderorder_of_string in
   let compressionlevel = attr_opt "compressionlevel" xml int_of_string in
@@ -462,10 +456,29 @@ let map_of_xml xml =
   let tilesets = children "tileset" xml map_tileset_of_xml in
   let layers = layers_of_xml xml in
   let geometry = map_variant_of_xml xml in
-  Map.make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
-    ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
-    ?backgroundcolor ?infinite ?properties ~tilesets ~layers ~geometry ()
+  Map.make ?class_ ?renderorder ?compressionlevel ~width ~height ~tilewidth
+    ~tileheight ?parallaxoriginx ?parallaxoriginy ?backgroundcolor ?infinite
+    ?properties ~tilesets ~layers ~geometry ()
 
-let map_of_toplevel_xml xml = child "map" xml map_of_xml
-let tileset_of_toplevel_xml xml = child "tileset" xml tileset_of_xml
-let template_of_toplevel_xml xml = child "template" xml template_of_xml
+let version_of_string s =
+  try Scanf.sscanf s "%d.%d" @@ fun x y -> (x, y)
+  with _ -> Util.Error.invalid_arg "version" s
+
+let check_format_version xml =
+  ignore
+    ( attr_opt "version" xml @@ fun s ->
+      let version = version_of_string s in
+      if version < Util.min_format_version then
+        let maj, min = version in
+        Util.Error.invalid_arg "version" (Format.sprintf "%d.%d" maj min) )
+
+let map_of_toplevel_xml xml =
+  child "map" xml @@ fun xml' -> check_format_version xml' ; map_of_xml xml'
+
+let tileset_of_toplevel_xml xml =
+  child "tileset" xml @@ fun xml' ->
+  check_format_version xml' ; tileset_of_xml xml'
+
+let template_of_toplevel_xml xml =
+  child "template" xml @@ fun xml' ->
+  check_format_version xml' ; template_of_xml xml'

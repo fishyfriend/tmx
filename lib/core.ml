@@ -844,9 +844,7 @@ module Make (State : State) = struct
     type geometry = Geometry.t
 
     type t = map =
-      { version : int * int;
-        tiledversion : string option;
-        class_ : string option;
+      { class_ : string option;
         renderorder : Renderorder.t option;
         compressionlevel : int option;
         width : int;
@@ -863,14 +861,9 @@ module Make (State : State) = struct
         geometry : Geometry.t }
     [@@deriving eq, ord, show {with_path = false}, make]
 
-    let make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel
-        ~width ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
-        ?backgroundcolor ?infinite ?properties ?(tilesets = []) ?(layers = [])
-        ~geometry () =
-      let () =
-        if version < Util.min_format_version then
-          let maj, min = version in
-          UE.invalid_arg "version" (Format.sprintf "%d.%d" maj min) in
+    let make ?class_ ?renderorder ?compressionlevel ~width ~height ~tilewidth
+        ~tileheight ?parallaxoriginx ?parallaxoriginy ?backgroundcolor
+        ?infinite ?properties ?(tilesets = []) ?(layers = []) ~geometry () =
       let properties = properties >|= normalize_plist in
       let tilesets =
         (* Sort by firstgid descending! *)
@@ -884,12 +877,10 @@ module Make (State : State) = struct
         let layers' = List.sort_uniq cmp layers in
         if List.compare_lengths layers layers' = 0 then layers'
         else UE.invalid_arg "layers" "id not unique" in
-      make ~version ?tiledversion ?class_ ?renderorder ?compressionlevel ~width
-        ~height ~tilewidth ~tileheight ?parallaxoriginx ?parallaxoriginy
-        ?backgroundcolor ?infinite ?properties ~tilesets ~layers ~geometry ()
+      make ?class_ ?renderorder ?compressionlevel ~width ~height ~tilewidth
+        ~tileheight ?parallaxoriginx ?parallaxoriginy ?backgroundcolor
+        ?infinite ?properties ~tilesets ~layers ~geometry ()
 
-    let version t = t.version
-    let tiledversion t = t.tiledversion
     let class_ t = t.class_
     let renderorder t = t.renderorder |? `Right_down
     let compressionlevel t = t.compressionlevel |? -1
