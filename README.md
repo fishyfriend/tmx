@@ -9,13 +9,14 @@ correponding to TMX data structures, and a suite of functions for working with
 them.
 
 `tmx` emulates the semantics of TMX structures as they exist in the Tiled
-desktop application, including [custom property][properties] inheritance and the
-application of [object templates][templates]. This allows the attributes of game
-resources in OCaml to match what is observed in Tiled.
+desktop application, including proper application of [custom
+property][properties] inheritance and [object templates][templates]. This allows
+the attributes of game resources in OCaml to match exactly what is observed in
+the editor.
 
 The XML-based map (.tmx), tileset (.tsx), and template (.tx) formats are
-supported along with the undocumented Custom Types JSON format. Support for the
-JSON map, tileset, and template formats is planned.
+currently supported along with the undocumented Custom Types JSON
+format. Support for the JSON map, tileset, and template formats is planned.
 
 ## Installation
 

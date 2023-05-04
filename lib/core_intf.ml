@@ -659,6 +659,16 @@ module type S = sig
     val get_object : t -> int -> Object.t option
     val get_object_exn : t -> int -> Object.t
 
+    (** Get a tile by its original GID in the map.
+
+        The provided GID is interpreted locally to this map's tilesets, as
+        though it has not been remapped by the loader. It is not safe to use
+        GIDs from loaded data structures with this function without passing them
+        through {!Loader.S.remap_gid_to_map} first. *)
+    val get_tile_by_orig_gid : Gid.t -> t -> Tile.t option
+
+    val get_tile_by_orig_gid_exn : Gid.t -> t -> Tile.t
+
     include StdT with type t := t  (** @closed *)
 
     include ClassT with type t := t  (** @closed *)

@@ -57,25 +57,53 @@ let make ?(image_files = `Check) ?(property_files = `Load) ~root () : t =
       let id = Gid.id gid - from_firstgid + to_firstgid in
       Gid.make ~flags id
 
-    let remap_gid_to_context ~from_alist gid =
+    let remap_gid_to_context_exn ~from_alist gid =
       let id = Gid.id gid in
       if id = 0 then gid
       else
         match List.find_opt (fun (fstgid, _) -> fstgid <= id) from_alist with
-        | None -> Util.Error.not_found "gid" (Gid.show gid)
+        | None -> UE.not_found "gid" (Gid.show gid)
         | Some (from_firstgid, ts) ->
           ( match C.get_tileset ts !context with
-          | None -> Util.Error.not_found "tileset" ts
+          | None -> UE.not_found "tileset" ts
           | Some (to_firstgid, _) -> rebase_gid ~from_firstgid ~to_firstgid gid
           )
 
+    let remap_gid_from_context_exn ~to_alist gid =
+      let id = Gid.id gid in
+      if id = 0 then gid
+      else
+        let tss = C.tilesets !context in
+        match List.find_opt (fun (fstgid, _, _) -> fstgid <= id) tss with
+        | None -> UE.not_found "gid" (Gid.show gid)
+        | Some (from_firstgid, ts, _) ->
+          ( match
+              List.find_opt (fun (_, ts') -> String.equal ts' ts) to_alist
+            with
+          | None -> UE.not_found "tileset" ts
+          | Some (to_firstgid, _) -> rebase_gid ~from_firstgid ~to_firstgid gid
+          )
+
+    let remap_gid_to_map_exn gid m =
+      remap_gid_from_context_exn ~to_alist:(Map.tilesets m) gid
+
+    let remap_gid_to_map gid m =
+      Util.Option.protect (fun () -> remap_gid_to_map_exn gid m) ()
+
+    let remap_gid_to_template_exn gid tem =
+      let to_alist = Option.to_list (Template.tileset tem) in
+      remap_gid_from_context_exn ~to_alist gid
+
+    let remap_gid_to_template gid tem =
+      Util.Option.protect (fun () -> remap_gid_to_template_exn gid tem) ()
+
     let map_remap_gids m =
       let from_alist = Map.tilesets m in
-      Aux.map_map_gids (remap_gid_to_context ~from_alist) m
+      Aux.map_map_gids (remap_gid_to_context_exn ~from_alist) m
 
     let template_remap_gids tem =
       let from_alist = Option.to_list (Template.tileset tem) in
-      Aux.template_map_gids (remap_gid_to_context ~from_alist) tem
+      Aux.template_map_gids (remap_gid_to_context_exn ~from_alist) tem
 
     let ensure_file_exists ~rel fname =
       let fname = if rel then Filename.concat root fname else fname in

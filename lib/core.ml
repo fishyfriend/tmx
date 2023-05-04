@@ -934,6 +934,15 @@ module Make (State : State) = struct
     let get_object_exn t id =
       get_object t id >|? fun () -> UE.not_found "object" (string_of_int id)
 
+    let get_tile_by_orig_gid_exn gid t =
+      let id = Gid.id gid in
+      let firstgid, ts = List.find (fun (fg, _) -> fg <= id) (tilesets t) in
+      let ts = get_tileset ts >|? fun () -> UE.not_found "tileset" ts in
+      Tileset.get_tile_exn ts (id - firstgid)
+
+    let get_tile_by_orig_gid gid t =
+      Util.Option.protect (fun () -> get_tile_by_orig_gid_exn gid t) ()
+
     let props = make_std_props ~class_ ~properties ~useas:`Map
 
     include ((val props) : Props.S with type t := t)

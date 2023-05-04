@@ -38,7 +38,7 @@ module type S = sig
   (** {1 Querying loaded resources}
 
       These resources are keyed by source filename, {b not} the value of the
-      resource's [name] field (if one exists). *)
+      resource's [name] field. *)
 
   val tilesets : unit -> (string * Tileset.t) list
   val templates : unit -> (string * Template.t) list
@@ -57,6 +57,23 @@ module type S = sig
   val get_file_exn : string -> string
   val get_tile_exn : Gid.t -> Tile.t
 
+  (** Translate a GID from loader context to map context.
+
+      This allows to recover the original value of a GID before it was remapped
+      by the loader.
+
+      [None] is returned if the GID references an unknown tile or if the
+      tileset that contains the referenced tile is not a dependency of the
+      specified map. *)
+  val remap_gid_to_map : Gid.t -> Map.t -> Gid.t option
+
+  val remap_gid_to_map_exn : Gid.t -> Map.t -> Gid.t
+
+  (** See [remap_gid_to_map]. *)
+  val remap_gid_to_template : Gid.t -> Template.t -> Gid.t option
+
+  val remap_gid_to_template_exn : Gid.t -> Template.t -> Gid.t
+
   (** {1 Unloading resources}
 
       These functions remove resources from the loader, allowing memory to be
@@ -64,7 +81,8 @@ module type S = sig
 
       {b Use with caution.} At present, dependencies are not checked, so
       e.g. unloading a tileset that is used by a currently-loaded map may
-      result in broken tile lookups.  *)
+      result in broken tile lookups, and unloading a map does not cause any
+      of its tilesets to be unloaded automatically.  *)
 
   val unload_tileset : string -> unit
   val unload_template : string -> unit
@@ -74,13 +92,13 @@ module type S = sig
   (** {1:customtypes Custom types}
 
       Custom types work differently from other loadable resources. They are
-      never auto-loaded and, once loaded, they are accessed by name (as returned
-      by {!Customtype.name}) rather than by source filename.
+      never auto-loaded and, once loaded, they are keyed by name as returned by
+      {!Customtype.name}.
 
       Multiple custom types with the same name are permitted so long as their
-      {!val:Class.useas} fields don't conflict. For this purpose, enums are
-      treated as classes with [useas] field equal to [[`Property]]. Thus, for
-      example, the following custom types may coexist...
+      {!val:Class.useas} fields don't conflict. In this context, enums are
+      treated as classes with [useas] equal to [[`Property]]. Thus, for example,
+      the following custom types may coexist...
 
       {[let class1 = Class.make ~useas:[`Object; `Layer] ~members:[(* ... *)] () in
         let class2 = Class.make ~useas:[`Tile] ~members:[(* ... *)] () in
@@ -122,39 +140,44 @@ module type Intf = sig
       Typical usage looks like:
 
       {[let loader = Loader.make ~root:"path/to/my/game" () in
-        let module L = (val loader) in
-        let m = L.load_map_xml_exn "level1.tmx" in
+        let module L : Loader.S = (val loader) in
+        let m : L.map = L.load_map_xml_exn "level1.tmx" in
         let open L.Core in (* alternative: let open L in *)
+        Map.do_something ();
         (* ... *)
       ]}
 
-      A loader provides a stateful context for loading TMX resource files and a
-      collection of immutable "core types" representing TMX data types. Each
-      core type is paired with a submodule [Map], [Object], etc. providing
-      accessors and other functions.
+      A loader provides a stateful context for loading TMX resource files ({!S})
+      and a collection of immutable "core types" ({{!S.map}[map]}) representing
+      TMX data types. Each core type is paired with a submodule ({{!S.Core.Map}
+      [Map]}) providing accessors and other functions.
 
-      The core types can be brought into scope by opening the [Core] module or
+      The core types can be brought into scope by opening {{!S.Core}[Core]} or
       by opening the loader directly. The former is usually preferable as it
       avoids cluttering the namespace with unprefixed loader functions.
 
       {2 Transformations}
 
-      When loading resources, the loader applies two transformations worth
-      noting. First, it rewrites all paths to be relative to its root
-      directory. So, for example, a reference to [../sprite.png] that occurs in
-      [a/b/tileset.tsx] is rewritten to [a/sprite.png]. This avoids the need to
-      traverse nested data structures to calculate the full path.
+      A loader applies two important transformations to loaded TMX data.
 
-      Second, within a map or template, the loader rewrites all tile GIDs to
-      point into a table of all loaded tilesets rather than just those used by
-      the containing map or template. This allows tile GIDs from different maps
-      to be treated interchangeably even if those maps use different tilesets.
+      First, it rewrites all paths to be relative to its configured root
+      directory. For example, a reference to [../sprite.png] that occurs in
+      [a/b/tileset.tsx] is rewritten to [a/sprite.png].
+
+      Second, within each map or template, the loader rewrites tile GIDs to
+      point into a table of all loaded tilesets. This means that GIDs are
+      globally equivalent across maps. If the original GIDs are needed for some
+      reason, they can be recovered using {{!S.remap_gid_to_map}
+      [remap_gid_to_map]} et al. Also see {{!S.Core.Map.get_tile_by_orig_gid}
+      [Map.get_tile_by_orig_gid]}.
+
+      The transformations are done mainly for implementation reasons.
 
       {2 Semantics}
 
       The functions on TMX data types simulate the semantics of the equivalent
-      data types in the Tiled desktop application, notably by providing tile GID
-      and custom property lookups based on the current loader state.
+      data types in the Tiled desktop application, notably by applying object
+      templates and custom property inheritance rules.
 
       This convenience comes with the caveat that accessor functions may return
       different values after the loader state changes. For example, if loading a
@@ -162,15 +185,15 @@ module type Intf = sig
       some map object, code like the following might succeed:
 
       {[(* ... continuing the previous snippet *)
-        let o = L.Map.get_object_exn m 42 in
-        assert (L.Object.get_property "active" o = None);
-        let _ = L.import_customtypes_json_exn "propertytypes.json" in
-        assert (L.Object.get_property "active" o =
-                L.Property.make ~name:"active" ~value:(`Bool true) ())
+        let o = Map.get_object_exn m 42 in
+        assert (Object.get_property "active" o = None);
+        let _ = import_customtypes_json_exn "propertytypes.json" in
+        assert (Object.get_property "active" o =
+                Property.make ~name:"active" ~value:(`Bool true) ())
       ]}
 
-      In this case, the solution to avoid surprises is to ensure that all
-      required Custom Types are loaded prior to using property values.
+      To avoid surprises, ensure that all required Custom Types are loaded
+      before using property values.
 
       For details on custom property inheritance rules, see
       {{:https://discourse.mapeditor.org/t/interitance-hierarchy-of-custom-properties/2749/3}
@@ -178,9 +201,10 @@ module type Intf = sig
       "ObjectType" should be read as equivalent to the current Tiled concept of
       "class.")
 
-      To get the "raw" custom properties without applying inheritance rules,
-      use [own_properties], [get_own_property], and [get_own_property_exn].
-  *)
+      To get a core type's "raw" custom properties without applying inheritance
+      rules, use {{!S.Core.PropsT.own_properties}[own_properties]},
+      {{!S.Core.PropsT.get_own_property}[get_own_property]}, and
+      {{!S.Core.PropsT.get_own_property_exn}[get_own_property_exn]}. *)
 
   (** {2 API} *)
 
@@ -199,7 +223,7 @@ module type Intf = sig
       do nothing. The default is [`Check].
 
       [property_files] tells how to handle custom properties that reference a
-      file. [`Load] means load the file; [`Check] means do not load, but fail if
+      file. [`Load] means load the file; [`Check] means do not load but fail if
       the file does not exist; [`Ignore] means do nothing. The default is
       [`Load]. *)
   val make :

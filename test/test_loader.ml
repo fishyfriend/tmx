@@ -115,6 +115,20 @@ let tc_gids_tile =
   check_tile_at ~tl ~col:9 ~row:0 ~ts:tsx_s1' ~tile:0 ;
   check_tile_at ~tl ~col:16 ~row:0 ~ts:tsx_s1' ~tile:7
 
-let test_gids = ("Remap GIDs", [tc_gids_object; tc_gids_tile])
+let tc_gids_recover =
+  A.test_case "Recover originals" `Quick @@ fun () ->
+  let n =
+    List.fold_left
+      (fun n (_, ts) -> n + L.Tileset.max_tile_id ts + 1)
+      0 (L.tilesets ()) in
+  for id = 1 to n do
+    let gid = Gid.make id in
+    let tile = L.get_tile_exn gid in
+    let gid' = L.remap_gid_to_map_exn gid m in
+    let tile' = L.Map.get_tile_by_orig_gid_exn gid' m in
+    A.check (module L.Tile) "equal" tile' tile
+  done
+
+let test_gids = ("Remap GIDs", [tc_gids_object; tc_gids_tile; tc_gids_recover])
 
 let () = A.run "Loader" [test_resources; test_reloc; test_gids]
