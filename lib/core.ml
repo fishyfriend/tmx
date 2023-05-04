@@ -37,13 +37,8 @@ module Make (State : State) = struct
     Props.make ~strict:false ~property_lists
 
   module type StdT = Sigs.StdT
-
-  module type ClassPropsT = sig
-    type t
-
-    include Sigs.ClassT with type t := t
-    include Sigs.PropsT with type t := t and type property := property
-  end
+  module type ClassT = Sigs.ClassT
+  module type PropsT = Sigs.PropsT with type property := property
 
   module Int_map = Stdlib.Map.Make (Int)
 
@@ -1011,6 +1006,11 @@ module Make (State : State) = struct
 
     let useas t = t.useas
     let members t = t.members
+
+    let property_lists t = [members t]
+    let props = Props.make ~strict:true ~property_lists
+
+    include ((val props) : Props.S with type t := t)
 
     let reloc ~from_dir ~to_dir t =
       {t with members = List.map (Property.reloc ~from_dir ~to_dir) t.members}
