@@ -12,13 +12,8 @@ module Make (Core : Core.S) = struct
     let variant = `Class (Class.make ~useas ~members) in
     Customtype.make ~id:1 ~name ~variant
 
-  module type PropsT = Sigs.PropsT with type property := Property.t
-
-  type 'a props = (module PropsT with type t = 'a)
-
-  let check_prop0 : type t. t props -> t -> string -> Property.t option -> unit
-      =
-   fun (module T) x k p_exp ->
+  let check_prop0 (type t) (module T : PropsT with type t = t) (x : t)
+      (k : string) (p_exp : Property.t option) : unit =
     let check p = A.(check (option (module Property))) "equal" p_exp p in
     T.get_property k x |> check ;
     T.properties x |> List.find_opt (fun p -> Property.name p = k) |> check

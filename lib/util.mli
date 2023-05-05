@@ -12,7 +12,6 @@ end
 
 module Error : sig
   val protect : ('a -> 'b) -> 'a -> ('b, Error.t) result
-  val throw : Error.t -> _
   val invalid_arg : string -> string -> _
   val nested_template : unit -> _
   val base64 : string -> _

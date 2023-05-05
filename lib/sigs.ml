@@ -11,35 +11,29 @@ module type OrdT = sig
 end
 
 module type ShowT = sig
+  (** Pretty-printers for debugging.
+
+    These functions reveal data structure internals and may be removed in a
+    future release. *)
+
   type t
 
-  val show : t -> string
   val pp : Format.formatter -> t -> unit
+  val show : t -> string
 end
 
 module type StdT = sig
   type t
 
-  include EqT with type t := t
-  include OrdT with type t := t
-  include ShowT with type t := t
+  include EqT with type t := t  (** @closed *)
+
+  include OrdT with type t := t  (** @closed *)
+
+  include ShowT with type t := t  (** @closed *)
 end
 
 module type ClassT = sig
   type t
 
   val class_ : t -> string option
-end
-
-module type PropsT = sig
-  type t
-  type property
-
-  val properties : t -> property list
-  val get_property : string -> t -> property option
-  val get_property_exn : string -> t -> property
-
-  val own_properties : t -> property list
-  val get_own_property : string -> t -> property option
-  val get_own_property_exn : string -> t -> property
 end

@@ -4,11 +4,10 @@
 [Tiled][tiled].
 
 The library aims for broad coverage of Tiled's [TMX file formats][tmx]. It
-provides an imperative context for loading TMX data files, a collection of
-immutable types correponding to TMX data structures, and a suite of functions
-for working with them.
+provides an imperative context for loading TMX data files and a collection of
+immutable types correponding to TMX data structures.
 
-`tmx` emulates the semantics of TMX structures as they exist in the Tiled
+`tmx` emulates the semantics of TMX data structures as they exist in the Tiled
 desktop application, including proper application of [custom
 property][properties] inheritance and [object templates][templates]. This allows
 the attributes of game resources in OCaml to match exactly what is observed in
@@ -16,53 +15,55 @@ the editor.
 
 The XML-based map (.tmx), tileset (.tsx), and template (.tx) formats are
 currently supported along with the undocumented Custom Types JSON
-format. Support for the JSON map, tileset, and template formats is planned.
+format.
 
 ## Installation
 
 `tmx` will hopefully be published to the main `opam` repository in the future.
-Till then, install the development version with:
+Till then, pin to the current version with:
 
-    opam pin tmx https://github.com/fishyfriend/tmx.git
+    opam pin tmx https://github.com/fishyfriend/tmx.git#v0.1.0
 
 ## Documentation
 
-A convenient HTML (and other formats) reference is available by running `dune
-build @doc`. The generated HTML landing page is
-`_build/default/_doc/_html/index.html`.
+A convenient reference is available by running `dune build @doc`. The generated
+HTML landing page is `_build/default/_doc/_html/index.html`.
 
-The most important documentation is for the `Loader` module. For the TMX types,
-one can generally consult the official [TMX format documentation][tmx]; the
-library API corresponds closely with it, and most differences are
+The most important documentation is for the `Loader` module. For the TMX core
+types, one can generally consult the official [TMX format documentation][tmx];
+the library API corresponds closely with it, and most differences are
 self-explanatory.
 
 ## Features
 
-  - Read maps, tilesets, templates, and custom property definitions
+Currently supported:
+
+  - Read XML maps, tilesets, templates
+  - Read custom property definitions from JSON Custom Types files
   - Automatically load dependencies
-  - Check for missing image files
   - Read custom class and enum properties
   - Apply Tiled domain logic for property inheritance
+  - Read both fixed-size and infinite maps
   - Apply object templates
+  - Check for missing image files
   - Compute the position and dimensions of tile subimages
   - Access embedded image data
   - See nice parse errors (in case you hand-write your XML)
 
-## Planned features
+Possibly supported in the future:
 
-  - Load JSON maps (.tmj), tilesets (.tsj), and templates (.tj)
-  - Read tilemap data compressed with Zstd
-  - Support for future versions of the TMX format
   - Better accessors and iteration functions
-  - Modify and write TMX data (maybe)
+  - Read tilemap data compressed with Zstd
+  - Load JSON maps (.tmj), tilesets (.tsj), and templates (.tj)
+  - Modify and write TMX data
 
-## Not supported
+Neither supported nor planned:
 
   - Embedded tilesets
   - Tiled versions before 1.10
   - Deprecated parts of the TMX format
   - Wang tiles, transformations, etc.
-  - Object Types files (use Custom Types JSON format instead)
+  - Object Types files (use newer Custom Types JSON format instead)
 
 ## Example
 
@@ -168,7 +169,6 @@ let () =
       Printf.printf "flag %s -> %s\n" label (if status then "yes" else "no"))
     (Enum.read_as_alist_exn e v)
 ;;
-
 ```
 
 ## Copyright
@@ -184,4 +184,4 @@ details.
 [tmx]: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#
 [tsdl]: https://erratique.ch/software/tsdl
 [templates]: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#template-files
-[properties]: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#properties
+[properties]: https://doc.mapeditor.org/en/stable/manual/custom-properties/

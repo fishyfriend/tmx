@@ -38,7 +38,7 @@ module Make (State : State) = struct
 
   module type StdT = Sigs.StdT
   module type ClassT = Sigs.ClassT
-  module type PropsT = Sigs.PropsT with type property := property
+  module type PropsT = Props.S0 with type property := property
 
   module Int_map = Stdlib.Map.Make (Int)
 
@@ -324,27 +324,23 @@ module Make (State : State) = struct
     let own_class t = t.class_
     let class_ t = with_proto t own_class >>? fun () -> tile_class t
 
-    let width t =
+    let dims t =
       match shape t with
-      | `Point -> 0.
+      | `Point -> (0., 0.)
       | `Polygon pts | `Polyline pts ->
-          let xmin, xmax =
+          let (xmin, ymin), (xmax, ymax) =
             List.fold_left
-              (fun (xmin, xmax) (x, _) -> (min xmin x, max xmax x))
-              (0., 0.) pts in
-          abs_float (xmax -. xmin)
-      | _ -> with_proto t (fun t -> t.width) |? 0.
+              (fun ((xmin, ymin), (xmax, ymax)) (x, y) ->
+                ((min xmin x, min ymin y), (max xmax x, max ymax y)) )
+              ((0., 0.), (0., 0.))
+              pts in
+          (abs_float (xmax -. xmin), abs_float (ymax -. ymin))
+      | _ ->
+          ( with_proto t (fun t -> t.width) |? 0.,
+            with_proto t (fun t -> t.height) |? 0. )
 
-    let height t =
-      match shape t with
-      | `Point -> 0.
-      | `Polygon pts | `Polyline pts ->
-          let ymin, ymax =
-            List.fold_left
-              (fun (ymin, ymax) (_, y) -> (min ymin y, max ymax y))
-              (0., 0.) pts in
-          abs_float (ymax -. ymin)
-      | _ -> with_proto t (fun t -> t.height) |? 0.
+    let width t = fst (dims t)
+    let height t = snd (dims t)
 
     let property_lists t =
       let own_props = properties t in

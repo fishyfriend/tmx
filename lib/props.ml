@@ -1,9 +1,7 @@
+include Props_intf
+
 open Util.Option.Infix
 open Types
-
-module type S = Sigs.PropsT with type property := Types.property
-
-type 'a t = (module S with type t = 'a)
 
 let rec merge_propertys (p : property as 'a) (p0 : 'a) : 'a =
   let propertytype = p.propertytype >>? fun () -> p0.propertytype in

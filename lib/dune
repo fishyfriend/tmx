@@ -16,6 +16,7 @@
   loader
   loader_intf
   props
+  props_intf
   sigs
   tmx
   types

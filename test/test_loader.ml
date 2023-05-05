@@ -4,8 +4,6 @@ module A = Alcotest
 module L = (val Loader.make ~root:"." ())
 module H = Helpers.Make (L.Core)
 
-module type PropsT = Sigs.PropsT with type property := L.Property.t
-
 let check_object_tile ~m ~o ~ts ~tile =
   let ts = L.get_tileset_exn ts in
   let tile_exp = L.Tileset.get_tile_exn ts tile in
