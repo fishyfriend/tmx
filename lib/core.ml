@@ -372,6 +372,14 @@ module Make (State : State) = struct
     type t = tilelayer = {width : int; height : int; data : Data.t [@main]}
     [@@deriving eq, ord, show {with_path = false}, make]
 
+    let make ~width ~height data =
+      let len = width * height * 4 in
+      let len' = Bytes.length (Data.bytes data) in
+      if len' <> len then
+        let msg = Printf.sprintf "Expected data length %d, got %d" len len' in
+        UE.invalid_arg "data" msg
+      else make ~width ~height data
+
     let width t = t.width
     let height t = t.height
     let data t = t.data
@@ -884,8 +892,6 @@ module Make (State : State) = struct
     let class_ t = t.class_
     let renderorder t = t.renderorder |? `Right_down
     let compressionlevel t = t.compressionlevel |? -1
-    let width t = t.width
-    let height t = t.height
     let tilewidth t = t.tilewidth
     let tileheight t = t.tileheight
     let parallaxoriginx t = t.parallaxoriginx |? 0
@@ -896,6 +902,19 @@ module Make (State : State) = struct
     let tilesets t = t.tilesets
     let layers t = t.layers
     let geometry t = t.geometry
+
+    let dims t =
+      if infinite t then
+        let rec aux (w, h) l =
+          match Layer.variant l with
+          | `Tilelayer tl -> Tilelayer.(max w (width tl), max h (height tl))
+          | `Group ls -> List.fold_left aux (w, h) ls
+          | _ -> (w, h) in
+        List.fold_left aux (0, 0) (layers t)
+      else (t.width, t.height)
+
+    let width t = fst (dims t)
+    let height t = snd (dims t)
 
     let nextlayerid t =
       List.fold_left (fun id l -> max id (Layer.id l + 1)) 0 (layers t)

@@ -634,8 +634,16 @@ module type S = sig
 
     val renderorder : t -> Renderorder.t
     val compressionlevel : t -> int
+
+    (** Get map width.
+
+        For an infinite map, the value supplied at map creation is ignored, and
+        a calculated value is returned instead. *)
     val width : t -> int
+
+    (** See {!width}. *)
     val height : t -> int
+
     val tilewidth : t -> int
     val tileheight : t -> int
     val parallaxoriginx : t -> int

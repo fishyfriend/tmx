@@ -31,6 +31,8 @@ let m_fixed1 =
 
 let tc_map_general =
   A.test_case "Load map" `Quick @@ fun () ->
+  A.(check int) "equal" 24 (Map.width m_fixed1) ;
+  A.(check int) "equal" 16 (Map.height m_fixed1) ;
   A.(check int) "equal" 4 (List.length (Map.layers m_fixed1)) ;
   A.(check int) "equal" 28 (List.length (Map.objects m_fixed1))
 
@@ -57,23 +59,34 @@ let tc_map_group =
 
 let tc_map_infinite =
   A.test_case "Load inf map" `Quick @@ fun () ->
+  let m =
+    with_xml_from_file "data/infinite1.tmx" Conv_xml.map_of_toplevel_xml in
+  A.(check int) "equal" 48 (Map.width m) ;
+  A.(check int) "equal" 64 (Map.height m) ;
   let tl =
-    with_xml_from_file "data/infinite1.tmx" Conv_xml.map_of_toplevel_xml
-    |> Fun.flip Map.get_layer_exn 1
-    |> Layer.variant
-    |> function
+    Map.get_layer_exn m 2 |> Layer.variant |> function
     | `Tilelayer tl -> tl
     | _ -> assert false in
+  A.(check int) "equal" 48 (Tilelayer.width tl) ;
+  A.(check int) "equal" 64 (Tilelayer.height tl) ;
   check_gid_at ~tl ~col:2 ~row:3 (Gid.make 5) ;
   check_gid_at ~tl ~col:17 ~row:20 (Gid.make 6) ;
   check_gid_at ~tl ~col:44 ~row:39 (Gid.make 7) ;
+  check_gid_at ~tl ~col:21 ~row:60 (Gid.make 8) ;
+  List.iter
+    (fun (x, y) ->
+      check_gid_at ~tl ~col:x ~row:y (Gid.make 1) ;
+      check_gid_at ~tl ~col:(x + 16) ~row:y (Gid.make 2) ;
+      check_gid_at ~tl ~col:x ~row:(y + 16) (Gid.make 3) ;
+      check_gid_at ~tl ~col:(x + 16) ~row:(y + 16) (Gid.make 4) )
+    [] ;
   let sum = ref 0 in
-  for col = 0 to 44 do
-    for row = 0 to 39 do
+  for col = 0 to Tilelayer.width tl - 1 do
+    for row = 0 to Tilelayer.height tl - 1 do
       if Tilelayer.gid_at tl ~col ~row <> Gid.make 0 then incr sum
     done
   done ;
-  A.(check int) "equal" 3 !sum
+  A.(check int) "equal" 20 !sum
 
 let tc_map_err_path =
   A.test_case "Show error path" `Quick @@ fun () ->

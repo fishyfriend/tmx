@@ -179,36 +179,33 @@ let data_of_xml xml =
   let compression = attr_opt "compression" xml compression_of_string in
   data_of_xml0 ?encoding ?compression xml
 
-let data_of_xml_chunked ~dims:(layer_w, layer_h) xml =
+let data_of_xml_chunked ~minx ~miny ~maxx ~maxy xml =
   let encoding = attr_opt "encoding" xml encoding_of_string in
   let compression = attr_opt "compression" xml compression_of_string in
-  let chunk_pos xml =
-    (attr "x" xml int_of_string, attr "y" xml int_of_string) in
-  match child_opt' "chunk" xml with
-  | None -> Data.create ?encoding ?compression 0
-  | Some xml' ->
-      let bytes = Bytes.create (layer_w * layer_h * 4) in
-      let _ =
-        let x_min, y_min =
-          List.fold_left
-            (fun (x0, y0) (x, y) -> (min x0 x, min y0 y))
-            (chunk_pos xml')
-            (children "chunk" xml chunk_pos) in
-        let x_max, y_max = (x_min + layer_w - 1, y_min + layer_h - 1) in
-        children "chunk" xml @@ fun xml'' ->
-        let x, y = chunk_pos xml'' in
-        let w = attr "width" xml'' int_of_string in
-        let h = attr "height" xml'' int_of_string in
-        let data = data_of_xml0 ?encoding ?compression xml'' in
-        let src = Data.bytes data in
-        let dst = bytes in
-        let len = min w (x_max - x + 1) * 4 in
-        for row = 0 to min (h - 1) (y_max - y) do
-          let src_off = row * w * 4 in
-          let dst_off = (x - x_min + ((y - y_min + row) * layer_w)) * 4 in
-          Bytes.blit src src_off dst dst_off len
-        done in
-      Data.make ?encoding ?compression bytes
+  let layer_w, layer_h = (maxx - minx + 1, maxy - miny + 1) in
+  let bytes = Bytes.create (layer_w * layer_h * 4) in
+  let _ =
+    children "chunk" xml @@ fun xml' ->
+    let x = attr "x" xml' int_of_string - minx in
+    let y = attr "y" xml' int_of_string - miny in
+    let w = attr "width" xml' int_of_string in
+    let h = attr "height" xml' int_of_string in
+    let data = data_of_xml0 ?encoding ?compression xml' in
+    let src = Data.bytes data in
+    let () =
+      let len = w * h * 4 in
+      let len' = Bytes.length src in
+      if len' <> len then
+        let msg = Printf.sprintf "Expected data length %d, got %d" len len' in
+        Util.Error.invalid_arg "data" msg in
+    let dst = bytes in
+    for row = 0 to h - 1 do
+      let src_off = row * w * 4 in
+      let dst_off = (x + ((y + row) * layer_w)) * 4 in
+      let len = w * 4 in
+      Bytes.blit src src_off dst dst_off len
+    done in
+  Data.make ?encoding ?compression bytes
 
 let image_format_of_string s =
   match String.lowercase_ascii s with
@@ -330,17 +327,42 @@ let template_of_xml xml =
   let object_ = child "object" xml object_of_xml in
   Template.make ?tileset object_
 
+let get_chunked_data_bounds xml : (int * int) * (int * int) =
+  let chunks : ((int * int) * (int * int)) list =
+    children "chunk" xml @@ fun xml' ->
+    let x = attr "x" xml' int_of_string in
+    let y = attr "y" xml' int_of_string in
+    let w = attr "width" xml' int_of_string in
+    let h = attr "height" xml' int_of_string in
+    ((x, y), (w, h)) in
+  List.fold_left
+    (fun ((minx, miny), (maxx, maxy)) ((x, y), (w, h)) ->
+      let minx = min minx x in
+      let miny = min miny y in
+      let maxx = max maxx (x + w - 1) in
+      let maxy = max maxy (y + h - 1) in
+      ((minx, miny), (maxx, maxy)) )
+    ((0, 0), (0, 0))
+    chunks
+
 let tilelayer_of_xml xml =
-  let width = attr "width" xml int_of_string in
-  let height = attr "height" xml int_of_string in
-  let data =
-    let data =
-      child_opt "data" xml @@ fun xml ->
-      match children' "chunk" xml with
-      | [] -> data_of_xml xml
-      | _ -> data_of_xml_chunked ~dims:(width, height) xml in
-    data |? Data.create (width * height * 4) in
-  Tilelayer.make ~width ~height data
+  (* As a shortcut, treat a tilelayer as infinite if and only if its data
+     element contains one or more chunks. Chunkless tilelayers of an infinite
+     map will be incorrectly treated as fixed-size, but this case should never
+     occur in practice. *)
+  child "data" xml @@ fun xml' ->
+  match children' "chunk" xml' with
+  | [] ->
+      let width = attr "width" xml int_of_string in
+      let height = attr "height" xml int_of_string in
+      let data = data_of_xml xml' in
+      Tilelayer.make ~width ~height data
+  | _ ->
+      let (minx, miny), (maxx, maxy) = get_chunked_data_bounds xml' in
+      let width = maxx - minx + 1 in
+      let height = maxy - miny + 1 in
+      let data = data_of_xml_chunked ~minx ~miny ~maxx ~maxy xml' in
+      Tilelayer.make ~width ~height data
 
 let draworder_of_string s =
   match s with
