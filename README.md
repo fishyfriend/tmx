@@ -5,7 +5,7 @@
 
 The library aims for broad coverage of Tiled's [TMX file formats][tmx]. It
 provides an imperative context for loading TMX data files and a collection of
-immutable types correponding to TMX data structures.
+immutable types corresponding to TMX data structures.
 
 `tmx` emulates the semantics of TMX data structures as they exist in the Tiled
 desktop application, including proper application of [custom
